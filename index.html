@@ -80,7 +80,7 @@ RU:{who:"Кто сегодня учится?",fm:"Family Math",chingiz:"Чинг
  emptyg:"Пока мало данных — реши несколько задач",notif:"Напоминания появятся позже",
  inset:"Что в наборе",pinhint:"Придумайте PIN из 4 цифр. Он закроет настройки от детей.",
  pinenter:"PIN родителей",pinsave:"Сохранить и открыть",pinok:"Открыть",pinbad:"Неверный PIN",
- daysrow:"дн. подряд",points:"баллов"},
+ daysrow:"дн. подряд",points:"баллов",whose:"Чей это телефон?",lock:"Привязать телефон",onlyone:"Ребёнок будет видеть только свой профиль.",setcode:"Код ребёнка (4 цифры, необязательно)",entercode:"Код",unlock:"Войти",switch:"Сменить ребёнка",readfull:"Прочитай условие целиком и выполни задание."},
 KK:{who:"Бүгін кім оқиды?",fm:"Family Math",chingiz:"Шыңғыс",tamina:"Тамина",parents:"Әділ мен Саги",
  g7:"7 сынып · 12 есеп",g3:"3 сынып · 10 есеп",ctrl:"Бақылау және есеп",
  back:"← Кім оқиды",hello:"Сәлем",today:"Бүгін",tasks:"есеп",
@@ -97,7 +97,7 @@ KK:{who:"Бүгін кім оқиды?",fm:"Family Math",chingiz:"Шыңғыс",
  emptyg:"Әзір дерек аз",notif:"Еске салғыш кейін",
  inset:"Жиынтықта не бар",pinhint:"4 цифрлы PIN ойлап табыңыз.",
  pinenter:"Ата-ана PIN",pinsave:"Сақтау",pinok:"Ашу",pinbad:"PIN қате",
- daysrow:"күн қатарынан",points:"ұпай"},
+ daysrow:"күн қатарынан",points:"ұпай",whose:"Бұл кімнің телефоны?",lock:"Телефонды бекіту",onlyone:"Бала тек өз профилін көреді.",setcode:"Бала коды (4 цифр, міндетті емес)",entercode:"Код",unlock:"Кіру",switch:"Баланы ауыстыру",readfull:"Шартын толық оқып, тапсырманы орында."},
 EN:{who:"Who is studying today?",fm:"Family Math",chingiz:"Chingiz",tamina:"Tamina",parents:"Adil and Sagi",
  g7:"Grade 7 · 12 tasks",g3:"Grade 3 · 10 tasks",ctrl:"Control and report",
  back:"← Who studies",hello:"Hi",today:"Today",tasks:"tasks",
@@ -114,7 +114,7 @@ EN:{who:"Who is studying today?",fm:"Family Math",chingiz:"Chingiz",tamina:"Tami
  emptyg:"Not enough data yet",notif:"Reminders later",
  inset:"In this set",pinhint:"Create a 4-digit PIN so kids cannot open settings.",
  pinenter:"Parent PIN",pinsave:"Save and open",pinok:"Open",pinbad:"Wrong PIN",
- daysrow:"day streak",points:"points"}
+ daysrow:"day streak",points:"points",whose:"Whose phone is this?",lock:"Lock this phone",onlyone:"The child will only see their own profile.",setcode:"Child code (4 digits, optional)",entercode:"Code",unlock:"Enter",switch:"Switch child",readfull:"Read the full problem and complete the task."}
 };
 function t(k){ return (I18N[S.lang]||I18N.RU)[k] || I18N.RU[k] || k; }
 function Lname(lv){ return t(LEVELS[lv]||"lyceum"); }
@@ -150,7 +150,7 @@ function setPin(v){ localStorage.setItem("fm_pin", v); }
 const _n = new Date();
 const S = {
   profile:null, parentOk:false, pinTry:"", pinErr:false, calOpen:false,
-  lang: localStorage.getItem("fm_lang")||"RU",
+  lang: localStorage.getItem("fm_lang")||"RU", device: localStorage.getItem("fm_device")||"", childCode:"",
   i:0, points:0, streak:0, hint:false, results:[], pick:null, checked:false, ok:false,
   y:_n.getFullYear(), m:_n.getMonth()+1, d:_n.getDate(),
   view:"home",
@@ -179,6 +179,49 @@ function loc(item, field){
   if(pack && pack[S.lang]) return pack[S.lang];
   if(pack && pack.RU) return pack.RU;
   return item[field];
+}
+function fullPrompt(item){
+  const raw = loc(item,"prompt");
+  const topic = topicName(item);
+  const L = S.lang;
+  const stems = {
+    RU:{
+      "Степени":"Упростите выражение. Ответ запишите в виде степени или одночлена.",
+      "Уравнения":"Решите уравнение. Найдите неизвестное число.",
+      "Многочлены":"Преобразуйте выражение: раскройте скобки и приведите подобные.",
+      "Проценты":"Найдите указанный процент от числа. Ответ — одно число.",
+      "Геометрия":"По условию найдите неизвестную величину (угол, сторону или периметр).",
+      "Дроби":"Выполните действие с дробями. Ответ можно оставить неправильной дробью.",
+      "Счёт":"Вычислите значение. Ответ — одно число.",
+      "Текст":"Прочитайте задачу и найдите то, что спрашивают.",
+      "Логика":"Найдите закономерность и продолжите ряд или ответ."
+    },
+    KK:{
+      "Степени":"Өрнекті ықшамдаңыз.",
+      "Уравнения":"Теңдеуді шешіңіз.",
+      "Многочлены":"Жақшаны ашып, ұқсас мүшелерді біріктіріңіз.",
+      "Проценты":"Пайызды табыңыз.",
+      "Геометрия":"Белгісіз шаманы табыңыз.",
+      "Дроби":"Бөлшектермен амал орындаңыз.",
+      "Счёт":"Мәнін есептеңіз.",
+      "Текст":"Есепті оқып, сұралғанды табыңыз.",
+      "Логика":"Заңдылықты табыңыз."
+    },
+    EN:{
+      "Степени":"Simplify the expression.",
+      "Уравнения":"Solve the equation.",
+      "Многочлены":"Expand and simplify.",
+      "Проценты":"Find the percentage.",
+      "Геометрия":"Find the unknown measure.",
+      "Дроби":"Compute with the fractions.",
+      "Счёт":"Calculate the value.",
+      "Текст":"Read the word problem and find what is asked.",
+      "Логика":"Find the pattern."
+    }
+  };
+  const pack = stems[L]||stems.RU;
+  const stem = pack[item.topic] || pack[topic] || t("readfull");
+  return stem+"\n\n"+raw;
 }
 function topicName(item){
   const p = item.topic_i18n;
@@ -243,6 +286,7 @@ function computeStreak(who){
 function render(){
   const root=document.getElementById("app");
   root.innerHTML="";
+  if(!S.device) return deviceSetup(root);
   if(!S.profile) return profiles(root);
   if(S.profile==="parents") return parents(root);
   if(S.view==="task") return task(root);
@@ -351,16 +395,65 @@ function calendarBox(){
   box.append(jump);
   return box;
 }
+
+function deviceSetup(root){
+  root.append(langBar());
+  root.append($("h1",{textContent:t("whose")}));
+  root.append($("p",{className:"muted",textContent:t("onlyone")}));
+  [["chingiz",t("chingiz")],["tamina",t("tamina")]].forEach(([id,n])=>{
+    const c=$("div",{className:"card"});
+    c.append($("b",{textContent:n}));
+    const inp=$("input",{className:"pin",maxLength:4,inputMode:"numeric",placeholder:t("setcode")});
+    c.append(inp);
+    const b=$("button",{className:"btn mint",textContent:t("lock"),style:"margin-top:10px"});
+    b.onclick=()=>{
+      const code=(inp.value||"").replace(/\D/g,"").slice(0,4);
+      localStorage.setItem("fm_device", id);
+      if(code.length===4) localStorage.setItem("fm_code_"+id, code);
+      S.device=id; S.profile=id; S.view="home"; render();
+    };
+    c.append(b);
+    root.append(c);
+  });
+  const p=$("div",{className:"card"});
+  p.innerHTML=`<b>${t("parents")}</b><div class="muted">${t("ctrl")}</div>`;
+  p.onclick=()=>{ localStorage.setItem("fm_device","shared"); S.device="shared"; S.profile="parents"; render(); };
+  root.append(p);
+}
 function profiles(root){
   root.append(langBar());
   root.append($("div",{className:"muted",textContent:t("fm")+" · онлайн v2",style:"font-weight:700;color:var(--mint);margin-top:8px"}));
   root.append($("h1",{textContent:t("who")}));
-  [["chingiz",t("chingiz"),t("g7")],["tamina",t("tamina"),t("g3")],["parents",t("parents"),t("ctrl")]].forEach(([id,n,s])=>{
+  const list = S.device==="shared"
+    ? [["chingiz",t("chingiz"),t("g7")],["tamina",t("tamina"),t("g3")],["parents",t("parents"),t("ctrl")]]
+    : S.device==="tamina"
+      ? [["tamina",t("tamina"),t("g3")],["parents",t("parents"),t("ctrl")]]
+      : [["chingiz",t("chingiz"),t("g7")],["parents",t("parents"),t("ctrl")]];
+  list.forEach(([id,n,sub])=>{
     const c=$("div",{className:"card"});
-    c.innerHTML=`<b style="font-size:18px">${n}</b><div class="muted">${s}</div>`;
-    c.onclick=()=>{S.profile=id;S.i=0;S.results=[];S.view="home";S.points=0;S.pick=null;S.checked=false;S.parentOk=false;S.pinTry="";S.pinErr=false;render()};
+    c.innerHTML=`<b style="font-size:18px">${n}</b><div class="muted">${sub}</div>`;
+    c.onclick=()=>{
+      if(id==="parents"){ S.profile="parents"; S.parentOk=false; S.pinTry=""; S.pinErr=false; render(); return; }
+      const need=localStorage.getItem("fm_code_"+id)||"";
+      if(need && S.childCode!==need){
+        const ask=prompt(t("entercode"));
+        if((ask||"").replace(/\D/g,"")!==need) return;
+        S.childCode=need;
+      }
+      S.profile=id;S.i=0;S.results=[];S.view="home";S.points=0;S.pick=null;S.checked=false;render();
+    };
     root.append(c);
   });
+  const sw=$("button",{className:"btn ghost",textContent:t("switch")});
+  sw.onclick=()=>{
+    const pin=localStorage.getItem("fm_pin")||"";
+    if(pin){
+      const ask=prompt(t("pinenter"));
+      if(ask!==pin) return;
+    }
+    localStorage.removeItem("fm_device"); S.device=""; S.profile=null; render();
+  };
+  root.append(sw);
 }
 function home(root){
   const name=S.profile==="tamina"?t("tamina"):t("chingiz");
@@ -409,7 +502,7 @@ function task(root){
   root.append(head);
   root.append($("div",{className:"muted",textContent:topicName(item)+(item.hard?t("hardtag"):""), style:"margin-bottom:8px"}));
   const card=$("div",{className:"card"});
-  card.append($("div",{textContent:loc(item,"prompt"),style:"font-size:22px;font-weight:800;margin-bottom:10px"}));
+  const pr=$("div",{style:"font-size:18px;font-weight:700;margin-bottom:10px;white-space:pre-wrap;line-height:1.35"}); pr.textContent=fullPrompt(item); card.append(pr);
   if(item.type==="quiz"){
     (item.options||[]).forEach(o=>{
       const d=$("div",{className:"opt",textContent:o});
