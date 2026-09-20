@@ -353,7 +353,7 @@ function calendarBox(){
 }
 function profiles(root){
   root.append(langBar());
-  root.append($("div",{className:"muted",textContent:t("fm"),style:"font-weight:700;color:var(--mint);margin-top:8px"}));
+  root.append($("div",{className:"muted",textContent:t("fm")+" · онлайн v2",style:"font-weight:700;color:var(--mint);margin-top:8px"}));
   root.append($("h1",{textContent:t("who")}));
   [["chingiz",t("chingiz"),t("g7")],["tamina",t("tamina"),t("g3")],["parents",t("parents"),t("ctrl")]].forEach(([id,n,s])=>{
     const c=$("div",{className:"card"});
