@@ -154,7 +154,7 @@ RU:{who:"Кто сегодня учится?",fm:"Family Math",chingiz:"Чинг
  closed:"закрыт",right:"Верно",pts:"Очки",weak:"Слабые темы",nextd:"Следующий день",
  toprof:"К профилям",level:"Уровень",nosol:"Пока нет решений на этом устройстве.",
  total:"Всего",last:"Последняя дата",hardtag:" · вызов",
- ans:"Введи ответ",note:"Отчёт с этого устройства. Дата и время пишутся в журнал.",
+ ans:"Введи ответ",note:"Прогресс детей подтягивается сам.",
  easy:"Разминка",lyceum:"Лицей",hard:"Вызов",always:"задач/день",
  cal:"Полный календарь",now:"Сейчас",pickday:"Выбранный день",gotoToday:"На сегодня",
  stats:"Мой прогресс",week:"7 дней",monthstat:"Месяц",acc:"Точность",solved:"Решено",
@@ -323,11 +323,15 @@ function setCloudUrl(u){
 async function cloudPull(){
   const u=cloudUrl();
   if(!u) return false;
-  const res=await fetch(u+"?ts="+Date.now(), {cache:"no-store"});
+  const res=await fetch(u+(u.includes("?")?"&":"?")+"ts="+Date.now(), {cache:"no-store"});
   if(!res.ok) throw new Error("pull "+res.status);
   const pack=await res.json();
-  if(pack && pack.logs) mergeFamily(pack);
-  return !!(pack && pack.logs);
+  if(pack && pack.logs){
+    const before=JSON.stringify(loadLog());
+    mergeFamily(pack);
+    return JSON.stringify(loadLog())!==before;
+  }
+  return false;
 }
 async function cloudPush(){
   const u=cloudUrl();
@@ -1104,27 +1108,6 @@ function parents(root){
   }
   root.append($("h1",{textContent:t("parents")}));
   root.append($("p",{className:"muted",textContent:t("note")}));
-  const sync=$("div",{className:"card",style:"background:var(--mintsoft)"});
-  sync.append($("b",{textContent:t("fam")}));
-  const stmp=familyStampText();
-  if(stmp) sync.append($("div",{className:"muted",style:"margin-top:6px",textContent:stmp}));
-  sync.append($("p",{className:"muted",style:"margin:8px 0",textContent:t("famhint")}));
-  const inp=$("input"); inp.type="text"; inp.placeholder="https://....firebasedatabase.app";
-  inp.value=localStorage.getItem("fm_cloud")||"";
-  inp.style.margin="8px 0";
-  sync.append($("div",{className:"muted",textContent:t("cloud")}));
-  sync.append(inp);
-  const saveC=$("button",{className:"btn mint",textContent:t("cloudsave")});
-  saveC.onclick=()=>{ setCloudUrl(inp.value); cloudPull().then(()=>cloudPush()).then(()=>{alert(t("famok"));render();}).catch(()=>alert(t("fambad"))); };
-  const pullC=$("button",{className:"btn ghost",textContent:t("cloudpull"),style:"margin-top:8px"});
-  pullC.onclick=()=>{ cloudPull().then(()=>{alert(t("famok"));render();}).catch(()=>alert(t("fambad"))); };
-  const bSend=$("button",{className:"btn ghost",textContent:t("famsend"),style:"margin-top:8px"});
-  bSend.onclick=()=>sendFamily();
-  const bGet=$("button",{className:"btn ghost",textContent:t("famget"),style:"margin-top:8px"});
-  bGet.onclick=()=>recvFamily();
-  sync.append(saveC); sync.append(pullC); sync.append(bSend); sync.append(bGet);
-  root.append(sync);
-  if(cloudUrl()) cloudPull().then(()=>render()).catch(()=>{});
   kidCard(root,"chingiz",t("chingiz"),12);
   kidCard(root,"tamina",t("tamina"),10);
   const box=$("div",{className:"card",style:"background:var(--mintsoft)"});
@@ -1144,12 +1127,17 @@ if("serviceWorker" in navigator){
 }
 render();
 function silentSync(){
-  if(!cloudUrl()) return;
-  cloudPull().then(()=>cloudPush()).catch(()=>{});
+  if(!cloudUrl() || window._fmSyncing) return;
+  window._fmSyncing=true;
+  cloudPull().then(changed=>{
+    return cloudPush().then(()=>changed);
+  }).then(changed=>{
+    if(changed && S.profile==="parents") render();
+  }).catch(()=>{}).finally(()=>{ window._fmSyncing=false; });
 }
 silentSync();
 if(!window._fmSync){
-  window._fmSync=setInterval(silentSync, 20000);
+  window._fmSync=setInterval(silentSync, 30000);
 }
 </script>
 
