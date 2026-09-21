@@ -124,6 +124,13 @@
   @keyframes floaty{0%,100%{transform:translateY(0)}50%{transform:translateY(18px)}}
   @keyframes fadeout{0%{opacity:1}100%{opacity:0}}
   @keyframes upfade{0%{opacity:0;transform:translate(-50%,10px)}20%{opacity:1;transform:translate(-50%,0)}80%{opacity:1}100%{opacity:0;transform:translate(-50%,-8px)}}
+  #fm-pull{
+    position:fixed;left:0;right:0;top:0;height:0;overflow:hidden;
+    display:flex;align-items:flex-end;justify-content:center;
+    font-weight:700;font-size:13px;color:var(--mint);
+    background:transparent;z-index:50;pointer-events:none;
+    transition:height .15s ease;
+  }
   @media (prefers-reduced-motion:reduce){
     *,*::before,*::after{animation:none!important;transition:none!important}
   }
@@ -154,7 +161,7 @@ RU:{who:"Кто сегодня учится?",fm:"Family Math",chingiz:"Чинг
  closed:"закрыт",right:"Верно",pts:"Очки",weak:"Слабые темы",nextd:"Следующий день",
  toprof:"К профилям",level:"Уровень",nosol:"Пока нет решений на этом устройстве.",
  total:"Всего",last:"Последняя дата",hardtag:" · вызов",
- ans:"Введи ответ",note:"Прогресс детей подтягивается сам.",
+ ans:"Введи ответ",note:"Прогресс детей подтягивается сам.",pull:"Потяни вниз",pullok:"Отпусти — обновить",pulling:"Обновляю…",
  easy:"Разминка",lyceum:"Лицей",hard:"Вызов",always:"задач/день",
  cal:"Полный календарь",now:"Сейчас",pickday:"Выбранный день",gotoToday:"На сегодня",
  stats:"Мой прогресс",week:"7 дней",monthstat:"Месяц",acc:"Точность",solved:"Решено",
@@ -178,7 +185,7 @@ KK:{who:"Бүгін кім оқиды?",fm:"Family Math",chingiz:"Шыңғыс",
  emptyg:"Әзір дерек аз",notif:"Еске салғыш кейін",
  inset:"Жиынтықта не бар",pinhint:"4 цифрлы PIN ойлап табыңыз.",
  pinenter:"Ата-ана PIN",pinsave:"Сақтау",pinok:"Ашу",pinbad:"PIN қате",
- daysrow:"күн қатарынан",points:"ұпай",whose:"Бұл кімнің телефоны?",lock:"Телефонды бекіту",onlyone:"Бала тек өз профилін көреді.",setcode:"Бала коды (4 цифр, міндетті емес)",entercode:"Код",unlock:"Кіру",switch:"Баланы ауыстыру",readfull:"Шартын толық оқып, тапсырманы орында.",hintbtn:"Ишара",hintttl:"Ағаш — қадамдар, дайын жауап емес",hintmore:"Тағы қадам",retryttl:"Бүгін қателерді қайталау",mastery:"Тақырып картасы",weakok:"әлсіз",midok:"орта",strongok:"мықты",almost:"Жақын. Талдауды қара.",repweek:"7 күндік есепті көшіру",fam:"Отбасы",famsend:"Ата-анаға жіберу",famget:"Бала телефонынан қою",famok:"Прогресс жаңарды",fambad:"Есеп оқылмады",famhint:"Бала телефонында «Жіберу» — осында «Қою».",famtime:"Жаңартылды",cloud:"Отбасы адресі",cloudsave:"Адрес сақтау",cloudpull:"Бұлттан жаңарту",cloudwait:"Бұлтқа қосылу…",cloudno:"Адрес жоқ",photo:"Фото",nophoto:"фото жоқ",share:"Бөлісу"},
+ daysrow:"күн қатарынан",points:"ұпай",whose:"Бұл кімнің телефоны?",lock:"Телефонды бекіту",onlyone:"Бала тек өз профилін көреді.",setcode:"Бала коды (4 цифр, міндетті емес)",entercode:"Код",unlock:"Кіру",switch:"Баланы ауыстыру",readfull:"Шартын толық оқып, тапсырманы орында.",hintbtn:"Ишара",hintttl:"Ағаш — қадамдар, дайын жауап емес",hintmore:"Тағы қадам",retryttl:"Бүгін қателерді қайталау",mastery:"Тақырып картасы",weakok:"әлсіз",midok:"орта",strongok:"мықты",almost:"Жақын. Талдауды қара.",repweek:"7 күндік есепті көшіру",fam:"Отбасы",famsend:"Ата-анаға жіберу",famget:"Бала телефонынан қою",famok:"Прогресс жаңарды",fambad:"Есеп оқылмады",famhint:"Бала телефонында «Жіберу» — осында «Қою».",famtime:"Жаңартылды",cloud:"Отбасы адресі",cloudsave:"Адрес сақтау",cloudpull:"Бұлттан жаңарту",cloudwait:"Бұлтқа қосылу…",cloudno:"Адрес жоқ",pull:"Төмен тарт",pullok:"Жібер — жаңарту",pulling:"Жаңартылуда…",photo:"Фото",nophoto:"фото жоқ",share:"Бөлісу"},
 EN:{who:"Who is studying today?",fm:"Family Math",chingiz:"Chingiz",tamina:"Tamina",parents:"Adil and Sagi",
  g7:"Grade 7 · 12 tasks",g3:"Grade 3 · 10 tasks",ctrl:"Control and report",
  back:"← Who studies",hello:"Hi",today:"Today",tasks:"tasks",
@@ -195,7 +202,7 @@ EN:{who:"Who is studying today?",fm:"Family Math",chingiz:"Chingiz",tamina:"Tami
  emptyg:"Not enough data yet",notif:"Reminders later",
  inset:"In this set",pinhint:"Create a 4-digit PIN so kids cannot open settings.",
  pinenter:"Parent PIN",pinsave:"Save and open",pinok:"Open",pinbad:"Wrong PIN",
- daysrow:"day streak",points:"points",whose:"Whose phone is this?",lock:"Lock this phone",onlyone:"The child will only see their own profile.",setcode:"Child code (4 digits, optional)",entercode:"Code",unlock:"Enter",switch:"Switch child",readfull:"Read the full problem and complete the task.",hintbtn:"Hint",hintttl:"Scaffolding — steps, not the answer",hintmore:"One more step",retryttl:"Retry mistakes today",mastery:"Topic map",weakok:"weak",midok:"ok",strongok:"strong",almost:"Almost. See where it broke.",repweek:"Copy 7-day report",fam:"Family",famsend:"Send progress to parents",famget:"Paste from child phone",famok:"Family progress updated",fambad:"Could not read the report",famhint:"On the child phone tap Send. Here tap Paste.",famtime:"Updated",cloud:"Family address",cloudsave:"Save address",cloudpull:"Refresh from cloud",cloudwait:"Connecting…",cloudno:"No family address yet",photo:"Photo",nophoto:"no photo",share:"Share"}
+ daysrow:"day streak",points:"points",whose:"Whose phone is this?",lock:"Lock this phone",onlyone:"The child will only see their own profile.",setcode:"Child code (4 digits, optional)",entercode:"Code",unlock:"Enter",switch:"Switch child",readfull:"Read the full problem and complete the task.",hintbtn:"Hint",hintttl:"Scaffolding — steps, not the answer",hintmore:"One more step",retryttl:"Retry mistakes today",mastery:"Topic map",weakok:"weak",midok:"ok",strongok:"strong",almost:"Almost. See where it broke.",repweek:"Copy 7-day report",fam:"Family",famsend:"Send progress to parents",famget:"Paste from child phone",famok:"Family progress updated",fambad:"Could not read the report",famhint:"On the child phone tap Send. Here tap Paste.",famtime:"Updated",cloud:"Family address",cloudsave:"Save address",cloudpull:"Refresh from cloud",cloudwait:"Connecting…",cloudno:"No family address yet",pull:"Pull down",pullok:"Release to refresh",pulling:"Refreshing…",photo:"Photo",nophoto:"no photo",share:"Share"}
 };
 function t(k){ return (I18N[S.lang]||I18N.RU)[k] || I18N.RU[k] || k; }
 function Lname(lv){ return t(LEVELS[lv]||"lyceum"); }
@@ -1127,17 +1134,52 @@ if("serviceWorker" in navigator){
 }
 render();
 function silentSync(){
-  if(!cloudUrl() || window._fmSyncing) return;
+  if(!cloudUrl() || window._fmSyncing) return Promise.resolve(false);
   window._fmSyncing=true;
-  cloudPull().then(changed=>{
+  return cloudPull().then(changed=>{
     return cloudPush().then(()=>changed);
   }).then(changed=>{
-    if(changed && S.profile==="parents") render();
-  }).catch(()=>{}).finally(()=>{ window._fmSyncing=false; });
+    if(changed) render();
+    return changed;
+  }).catch(()=>false).finally(()=>{ window._fmSyncing=false; });
 }
 silentSync();
 if(!window._fmSync){
   window._fmSync=setInterval(silentSync, 30000);
+}
+if(!window._fmPull){
+  window._fmPull=true;
+  const bar=document.createElement("div");
+  bar.id="fm-pull";
+  document.body.prepend(bar);
+  let startY=0, pulling=false, dist=0;
+  document.addEventListener("touchstart", e=>{
+    if(window.scrollY>8) { pulling=false; return; }
+    startY=e.touches[0].clientY;
+    pulling=true; dist=0;
+  }, {passive:true});
+  document.addEventListener("touchmove", e=>{
+    if(!pulling) return;
+    dist=Math.max(0, e.touches[0].clientY-startY);
+    if(window.scrollY>8){ pulling=false; dist=0; bar.style.height="0"; return; }
+    if(dist>10){
+      bar.style.height=Math.min(64, 8+dist*0.35)+"px";
+      bar.textContent = dist>58 ? t("pullok") : t("pull");
+    }
+  }, {passive:true});
+  document.addEventListener("touchend", ()=>{
+    const go=pulling && dist>58;
+    pulling=false; dist=0;
+    if(go){
+      bar.style.height="48px";
+      bar.textContent=t("pulling");
+      Promise.resolve(silentSync()).finally(()=>{
+        setTimeout(()=>{ bar.style.height="0"; bar.textContent=""; }, 350);
+      });
+    } else {
+      bar.style.height="0"; bar.textContent="";
+    }
+  }, {passive:true});
 }
 </script>
 
