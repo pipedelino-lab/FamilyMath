@@ -1001,7 +1001,7 @@ function done(root){
   const gs=$("button",{className:"btn ghost",textContent:t("stats"),style:"margin-top:8px"});
   gs.onclick=()=>{S.view="stats";render()};
   root.append(gs);
-
+}
 function barsFor(who, nDays){
   const log=(loadLog()[who]||[]);
   const map={};
