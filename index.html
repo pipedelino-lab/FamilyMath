@@ -3731,16 +3731,21 @@ body[data-kid="tamina"]{--acc:#FF3D7F;--acc-d:#C81E5B;--acc2:#FF9F1A;--acc2-d:#D
 body[data-kid="parents"]{--acc:#2F6BFF;--acc-d:#1847C2;--acc2:#00A88F;--acc2-d:#007F6C;--tint:#E8EFFF}
 body{font-family:Nunito,system-ui,-apple-system,Roboto,sans-serif;font-weight:700;color:var(--ink);
   background:#F4F5FF;background-attachment:fixed}
-body[data-kid="chingiz"]{background:repeating-linear-gradient(90deg,rgba(31,43,123,.035) 0 44px,transparent 44px 88px),linear-gradient(180deg,#FFFFFF 0%,#FBF6E6 100%) fixed}
+body[data-kid="chingiz"]{background:repeating-linear-gradient(180deg,#DFF2E3 0 56px,#EEF8F0 56px 112px) fixed}
 body[data-kid="chingiz"] .mint{color:#111850}
 body[data-kid="chingiz"] .avatar{box-shadow:0 0 0 3px #D4AA2E}
 body[data-kid="chingiz"] .fm-sub.on{background:#1F2B7B;border-color:#111850;box-shadow:0 5px 0 #D4AA2E;color:#fff}
-body[data-kid="chingiz"] .fm-today{background:radial-gradient(circle at 50% 50%,transparent 58px,rgba(255,255,255,.16) 59px,rgba(255,255,255,.16) 61px,transparent 62px),linear-gradient(90deg,transparent calc(50% - 1px),rgba(255,255,255,.16) calc(50% - 1px),rgba(255,255,255,.16) calc(50% + 1px),transparent calc(50% + 1px)),repeating-linear-gradient(90deg,#1F2B7B 0 36px,#24318A 36px 72px);box-shadow:0 7px 0 #D4AA2E}
-body[data-kid="chingiz"] .fm-today::before{content:"7";position:absolute;right:14px;top:-6px;width:auto;height:auto;border-radius:0;background:none;font:800 150px/1 Unbounded,sans-serif;color:rgba(212,170,46,.22)}
+body[data-kid="chingiz"] .fm-today{background:repeating-linear-gradient(90deg,#2F9E4F 0 34px,#3BB25E 34px 68px);box-shadow:0 7px 0 #1C6B34;padding:22px 34px 20px}
+.fm-pitch{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
+body[data-kid="chingiz"] .fm-today>*:not(.fm-pitch):not(.fm-emb){position:relative;z-index:1}
+body[data-kid="chingiz"] .fm-today .lbl,body[data-kid="chingiz"] .fm-today .comp{text-shadow:0 1px 3px rgba(0,60,20,.7)}
+body[data-kid="chingiz"] .fm-today .big{text-shadow:0 2px 0 rgba(0,0,0,.25)}
+body[data-kid="chingiz"] .fm-today .bar{background:rgba(255,255,255,.35)}
+body[data-kid="chingiz"] .fm-today::before{content:"7";position:absolute;right:46px;bottom:-18px;top:auto;width:auto;height:auto;border-radius:0;background:none;font:800 150px/1 Unbounded,sans-serif;color:rgba(255,255,255,0);z-index:0}
 body[data-kid="chingiz"] .fm-today::after{display:none}
-body[data-kid="chingiz"] .fm-today .big{color:#F2CC5B}
-body[data-kid="chingiz"] .fm-today .bar>i{background:#F2CC5B}
-body[data-kid="chingiz"] .fm-today .btn{color:#111850}
+body[data-kid="chingiz"] .fm-today .big{color:#FFE066}
+body[data-kid="chingiz"] .fm-today .bar>i{background:#FFE066}
+body[data-kid="chingiz"] .fm-today .btn{color:#1C6B34;box-shadow:0 6px 0 #1C6B34}
 body[data-kid="chingiz"] .gem{background:#1F2B7B;box-shadow:0 8px 0 #D4AA2E}
 body[data-kid="chingiz"] .toast-ok{background:#1F2B7B;box-shadow:0 5px 0 #D4AA2E}
 body[data-kid="tamina"]{background:linear-gradient(170deg,#FFE6F0 0%,#FFF7FA 40%,#FFF1D6 100%) fixed}
@@ -3787,7 +3792,7 @@ input[type=text]:focus,input.pin:focus{outline:0;border-color:var(--acc)!importa
 
 body{--mint:var(--acc);--coral:var(--acc);--mintsoft:var(--tint)}
 .fm-kid.c::after{display:none}
-.fm-emb{position:absolute;right:14px;top:14px;width:64px;height:64px;border-radius:18px;border:2px dashed rgba(255,255,255,.55);background:rgba(255,255,255,.10);color:#fff;font:800 11px/1.15 Nunito,sans-serif;display:flex;align-items:center;justify-content:center;text-align:center;z-index:2;padding:0;overflow:hidden}
+.fm-emb{position:absolute;right:38px;top:16px;width:64px;height:64px;border-radius:18px;border:2px dashed rgba(255,255,255,.55);background:rgba(255,255,255,.10);color:#fff;font:800 11px/1.15 Nunito,sans-serif;display:flex;align-items:center;justify-content:center;text-align:center;z-index:2;padding:0;overflow:hidden}
 .fm-emb.has{border:0;background:#fff;box-shadow:0 0 0 3px #D4AA2E}
 .fm-emb img{width:100%;height:100%;object-fit:contain}
 body[data-kid="chingiz"] .fm-today .lbl{padding-right:74px}
@@ -3963,6 +3968,29 @@ window.profiles=function(root){
   root.append(sw);
 };
 
+function pitchEl(){ const w=document.createElementNS("http://www.w3.org/2000/svg","svg"); w.setAttribute("class","fm-pitch");
+  const NS="http://www.w3.org/2000/svg"; const mk=(t,a)=>{ const e=document.createElementNS(NS,t); for(const k in a) e.setAttribute(k,a[k]); return e; };
+  const defs=mk("defs",{}); const pat=mk("pattern",{id:"fmnet",width:"6",height:"6",patternUnits:"userSpaceOnUse"}); pat.append(mk("path",{d:"M0 0L6 6M6 0L0 6",stroke:"rgba(255,255,255,.8)","stroke-width":"0.9"})); defs.append(pat); w.append(defs);
+  const g=mk("g",{fill:"none",stroke:"rgba(255,255,255,.5)","stroke-width":"2"}); w.append(g);
+  function draw(){ const W=w.clientWidth||w.parentNode.clientWidth, H=w.clientHeight||w.parentNode.clientHeight; if(!W||!H) return; while(g.firstChild) g.firstChild.remove();
+    w.querySelectorAll(".fm-goal,.fm-spot").forEach(x=>x.remove());
+    const m=22, top=12, bot=H-12, cy=H/2, fh=bot-top;
+    g.append(mk("rect",{x:m,y:top,width:W-2*m,height:fh,rx:3}));
+    g.append(mk("line",{x1:W/2,y1:top,x2:W/2,y2:bot}));
+    g.append(mk("circle",{cx:W/2,cy:cy,r:Math.min(46,fh*0.22)}));
+    const pbH=fh*0.56, pbW=Math.min(58,W*0.15), gaH=fh*0.28, gaW=pbW*0.42;
+    [[m,1],[W-m,-1]].forEach(([x0,d])=>{
+      g.append(mk("rect",{x:d>0?x0:x0-pbW,y:cy-pbH/2,width:pbW,height:pbH}));
+      g.append(mk("rect",{x:d>0?x0:x0-gaW,y:cy-gaH/2,width:gaW,height:gaH}));
+      const r=Math.min(30,pbH*0.3); const ax=x0+d*pbW; g.append(mk("path",{d:"M"+ax+" "+(cy-r*0.8)+" A"+r+" "+r+" 0 0 "+(d>0?1:0)+" "+ax+" "+(cy+r*0.8)}));
+      const gw=16, gh=fh*0.2; const gx=d>0?x0-gw:x0;
+      w.append(mk("rect",{class:"fm-goal",x:gx,y:cy-gh/2,width:gw,height:gh,fill:"url(#fmnet)",stroke:"#fff","stroke-width":"3"}));
+      w.append(mk("circle",{class:"fm-spot",cx:x0+d*pbW*0.7,cy:cy,r:2.5,fill:"rgba(255,255,255,.6)"}));
+    });
+    w.append(mk("circle",{class:"fm-spot",cx:W/2,cy:cy,r:3.5,fill:"rgba(255,255,255,.6)"}));
+  }
+  requestAnimationFrame(draw); try{ new ResizeObserver(draw).observe(w); }catch(e){}
+  return w; }
 /* ---------- home ---------- */
 const _oldHome=window.home;
 window.home=function(root){
@@ -3995,7 +4023,7 @@ window.home=function(root){
   go.onclick=()=>{ if(finished){ S.view="done"; render(); return; }
     if(!cf()) consumeRetry(whoKey()+"_"+subjKey(), isoDate(S.y,S.m,S.d), S._retryN||0);
     resetTaskFlags(); S.view="task"; render(); };
-  if(who==="chingiz"){ const em=getPhoto("emblem_chingiz"); const eb=$e("button","fm-emb"+(em?" has":""),em?"<img alt=''>":"＋<br>эмблема"); if(em) eb.firstChild.src=em;
+  if(who==="chingiz"){ tc.prepend(pitchEl()); const em=getPhoto("emblem_chingiz"); const eb=$e("button","fm-emb"+(em?" has":""),em?"<img alt=''>":"＋<br>эмблема"); if(em) eb.firstChild.src=em;
     eb.onclick=e=>{ e.stopPropagation(); pickPhoto("emblem_chingiz"); }; tc.append(eb); }
   tc.append(go); root.append(tc);
   root.append(weekStrip());
@@ -4059,6 +4087,104 @@ window.render=function(){
   const sig=S.profile+"|"+S.view+"|"+S.i;
   if(sig!==lastSig){ lastSig=sig; window.scrollTo(0,0); }
   if(!_inPop) syncHistory();
+};
+})();
+
+</script>
+<script>
+/* ===== FM: "error in task" reports + full-field log sync ===== */
+(function(){
+"use strict";
+const $e=(tag,cls,html)=>{ const x=document.createElement(tag); if(cls) x.className=cls; if(html!=null) x.innerHTML=html; return x; };
+const esc=s=>String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function loadRep(){ try{ return JSON.parse(localStorage.getItem("fm_reports")||"[]"); }catch(e){ return []; } }
+function saveRep(a){ try{ localStorage.setItem("fm_reports",JSON.stringify(a.slice(-200))); }catch(e){} }
+window.fmReports=loadRep;
+
+/* ---- sync: keep subject/kind/unit/slot in log records; carry reports ---- */
+const _pack=window.familyPack;
+window.familyPack=function(){ const p=_pack(); const log=loadLog(); const cut=Date.now()-21*86400000;
+  ["chingiz","tamina"].forEach(w=>{ p.logs[w]=(log[w]||[]).filter(r=>(r.t||0)>=cut).map(r=>({t:r.t,date:r.date,time:r.time,topic:r.topic,ok:!!r.ok,hint:!!r.hint,lv:r.lv,subject:r.subject,kind:r.kind,unit:r.unit,slot:r.slot})); });
+  p.reports=loadRep(); return p; };
+const _merge=window.mergeFamily;
+window.mergeFamily=function(pack){
+  // enrich local records that came earlier without subject/kind
+  if(pack&&pack.logs){ const log=loadLog(); let ch=false;
+    ["chingiz","tamina"].forEach(w=>{ const idx=new Map((log[w]||[]).map(r=>[recKey(Object.assign({who:w},r)),r]));
+      (pack.logs[w]||[]).forEach(r=>{ const m=idx.get(recKey(Object.assign({who:w},r))); if(m){ ["subject","kind","unit","slot"].forEach(f=>{ if(m[f]==null&&r[f]!=null){ m[f]=r[f]; ch=true; } }); } }); });
+    if(ch) saveLog(log); }
+  const res=_merge(pack);
+  if(pack&&Array.isArray(pack.reports)){ const mine=loadRep(); const by=new Map(mine.map(r=>[r.id,r]));
+    pack.reports.forEach(r=>{ if(!r||!r.id) return; const m=by.get(r.id); if(!m){ mine.push(r); by.set(r.id,r); } else if(r.done&&!m.done){ m.done=r.done; } });
+    mine.sort((a,b)=>a.t-b.t); saveRep(mine); }
+  return res;
+};
+
+/* ---- report box on the task screen ---- */
+const REASONS=["Мой ответ верный, а засчитали ошибку","В приложении неверный ответ","Непонятное условие","Ошибка в подсказке или решении","Другое"];
+const _task=window.task;
+window.task=function(root){
+  _task(root);
+  if(S.view!=="task") return;
+  let all=[]; try{ all=tasks(); }catch(e){ return; }
+  const item=all[S.i]; if(!item) return;
+  const key=(S._progKey||"")+"#"+S.i;
+  const sent=loadRep().some(r=>r.key===key);
+  const wrap=$e("div",null); wrap.style.cssText="margin-top:18px;text-align:center";
+  if(sent){ wrap.append($e("div","muted","⚠️ Сообщение об ошибке отправлено родителям")); root.append(wrap); return; }
+  if(S._repOpen && S._repOpen!==key) S._repOpen=null;
+  if(!S._repOpen){
+    const b=$e("button",null,"⚠️ Ошибка в задании?"); b.style.cssText="background:none;border:0;color:var(--muted);font:800 15px Nunito,sans-serif;text-decoration:underline;padding:10px";
+    b.onclick=()=>{ S._repOpen=key; S._repWhy=null; render(); setTimeout(()=>{ const c=document.getElementById("fm-rep"); if(c) c.scrollIntoView({behavior:"smooth",block:"center"}); },50); };
+    wrap.append(b); root.append(wrap); return;
+  }
+  const c=$e("div","card"); c.id="fm-rep"; c.style.textAlign="left";
+  c.append($e("b",null,"Что не так с заданием?"));
+  const list=$e("div",null); list.style.cssText="display:flex;flex-direction:column;gap:8px;margin:10px 0";
+  REASONS.forEach(r=>{ const o=$e("button","chip",esc(r)); o.style.textAlign="left"; if(S._repWhy===r){ o.style.background="var(--acc)"; o.style.color="#fff"; o.style.borderColor="var(--acc-d)"; }
+    o.onclick=()=>{ S._repWhy=r; const v=document.getElementById("fm-rep-note"); S._repNote=v?v.value:""; render(); }; list.append(o); });
+  c.append(list);
+  const note=$e("input"); note.type="text"; note.id="fm-rep-note"; note.placeholder="Можно написать подробнее (необязательно)"; note.value=S._repNote||""; note.style.fontSize="16px"; c.append(note);
+  const send=$e("button","btn coral","Отправить"); send.style.marginTop="12px"; send.disabled=!S._repWhy;
+  send.onclick=()=>{ const who=whoKey(); const n=new Date();
+    const rep={id:who+"-"+Date.now(),key,t:Date.now(),date:isoDate(S.y,S.m,S.d),time:pad(n.getHours())+":"+pad(n.getMinutes()),who,subject:subjKey(),unit:item.unit||"",topic:item.topic||"",
+      prompt:String(item.prompt||"").slice(0,600),options:item.options?item.options.map(o=>o.t):null,given:S.pick==null?"":String(S.pick).slice(0,200),
+      answer:String(item.answer||""),checked:!!S.checked,ok:!!S.ok,why:S._repWhy,note:(document.getElementById("fm-rep-note")||{}).value||"",done:0};
+    const a=loadRep(); a.push(rep); saveRep(a); stampFamily(); if(cloudUrl()) cloudPush().catch(()=>{});
+    S._repOpen=null; S._repWhy=null; S._repNote=""; render(); };
+  c.append(send);
+  const cancel=$e("button","btn ghost","Отмена"); cancel.style.marginTop="8px"; cancel.onclick=()=>{ S._repOpen=null; S._repWhy=null; S._repNote=""; render(); }; c.append(cancel);
+  root.append(c);
+};
+
+/* ---- parents: list of reports ---- */
+function repText(r){
+  const kid=r.who==="tamina"?"Тамина":"Чингиз";
+  return ["⚠️ "+kid+" · "+t(r.subject)+" · "+r.date+" "+r.time+(r.unit?" · тема "+r.unit:""),
+    "Причина: "+r.why+(r.note?" — "+r.note:""),
+    "Задание: "+r.prompt,
+    r.options?"Варианты: "+r.options.join(" | "):"",
+    "Ответ ребёнка: "+(r.given||"—")+(r.checked?(r.ok?" (засчитан)":" (не засчитан)"):" (до проверки)"),
+    "Ответ приложения: "+r.answer].filter(Boolean).join("\n");
+}
+const _parents=window.parents;
+window.parents=function(root){
+  _parents(root);
+  if(!S.parentOk) return;
+  const all=loadRep(); const open=all.filter(r=>!r.done);
+  const c=$e("div","card"); c.style.border="2px solid "+(open.length?"#F59E0B":"var(--line)");
+  c.append($e("b",null,"⚠️ Ошибки в заданиях"+(open.length?" · "+open.length:"")));
+  if(!open.length){ c.append($e("div","muted","Новых сообщений нет. Если ребёнок нажмёт «Ошибка в задании?», сообщение появится здесь.")); c.lastChild.style.marginTop="6px"; }
+  else {
+    open.slice(-20).reverse().forEach(r=>{ const row=$e("div",null); row.style.cssText="margin-top:10px;padding-top:10px;border-top:2px dashed var(--line);white-space:pre-wrap;line-height:1.45;font-size:15px"; row.textContent=repText(r); c.append(row); });
+    const txt="Claude, дети отметили ошибки в Family Math:\n\n"+open.map(repText).join("\n\n");
+    const sh=$e("button","btn coral","Отправить Claude"); sh.style.marginTop="12px";
+    sh.onclick=()=>{ if(navigator.share) navigator.share({text:txt}).catch(()=>{}); else { try{ navigator.clipboard.writeText(txt); }catch(e){} sh.textContent="Скопировано — вставь в чат"; } };
+    const dn=$e("button","btn ghost","Отметить как исправленные"); dn.style.marginTop="8px";
+    dn.onclick=()=>{ const a=loadRep(); a.forEach(r=>{ if(!r.done) r.done=Date.now(); }); saveRep(a); stampFamily(); if(cloudUrl()) cloudPush().catch(()=>{}); render(); };
+    c.append(sh); c.append(dn);
+  }
+  const h=root.querySelector("h1"); if(h&&h.nextSibling) h.parentNode.insertBefore(c,h.nextSibling.nextSibling||null); else root.append(c);
 };
 })();
 
