@@ -2643,8 +2643,43 @@ U("t11","Деление с остатком",{
      return inp({topic:"Деление с остатком",prompt:"Выполни деление с остатком: "+a+" : "+b+".\nЗапиши остаток.",check:{kind:"num",ref:String(m)},answer:String(m),hints:["Найди наибольшее число, которое делится на "+b+" и не больше "+a+".","Остаток = "+a+" − это число."],solution:[a+" : "+b+" = "+q+" (ост. "+m+")","Проверка: "+q+" · "+b+" + "+m+" = "+a+".","Ответ: остаток "+m+"."]}); }}
   ]});
 
+/* письменное деление многозначного на однозначное (карточка Д.Р. 12.10.26) */
+function longDiv(a,b){ const ds=String(a).split("").map(Number); let i=0, cur=0;
+  while(i<ds.length && cur*10+ds[i]<b){ cur=cur*10+ds[i]; i++; } if(i<ds.length){ cur=cur*10+ds[i]; i++; }
+  const first=cur, nq=ds.length-i+1; const lines=["Первое неполное делимое — "+fm(first)+". Значит, в частном будет "+nq+" "+(nq===1?"цифра":nq<5?"цифры":"цифр")+"."];
+  let q="", trans=0, step=0;
+  while(true){ const d=Math.floor(cur/b), pr=d*b, rm=cur-pr; q+=d;
+    if(step===0) lines.push(fm(cur)+" : "+b+" → по "+d+";  "+d+" · "+b+" = "+pr+";  "+cur+" "+M+" "+pr+" = "+rm+".");
+    else if(cur<b) lines.push("Сносим цифру: получаем "+cur+". "+cur+" меньше "+b+" — в частном пишем 0.");
+    else lines.push("Сносим цифру → "+cur+";  "+cur+" : "+b+" → по "+d+";  "+d+" · "+b+" = "+pr+";  "+cur+" "+M+" "+pr+" = "+rm+".");
+    if(i>=ds.length) break; if(rm) trans++; cur=rm*10+ds[i]; i++; step++; }
+  return {q:Number(q),first,nq,lines,trans}; }
+function pickDiv(r,lv,want){ for(let k=0;k<200;k++){ const b=r.int(2,9); const lo=lv===1?100:lv===2?1000:10000, hi=lv===1?999:lv===2?9999:99999;
+    const q=r.int(Math.ceil(lo/b),Math.floor(hi/b)); const a=b*q; const L=longDiv(a,b);
+    if(want===1 && L.trans!==1) continue; if(want===2 && L.trans!==2) continue; if(lv===3 && !/0/.test(String(q)) && r.int(0,1)) continue;
+    return {a,b,L}; } return null; }
+U("t12","Письменное деление на однозначное",{
+  rules:[{id:"m3ldiv",title:"Письменное деление",text:"Деление начинают со старших разрядов. Сначала находят первое неполное делимое — самое маленькое число из первых цифр делимого, которое не меньше делителя. Сколько неполных делимых — столько цифр в частном. Если после сноса цифры число меньше делителя, в частном пишут 0. Проверка: частное · делитель = делимое.",
+     cloze:{t:"Если после сноса цифры число меньше делителя, в частном пишут ___.",a:"0",acc:["ноль","нуль"]},
+     tf:[{s:"В примере 14 232 : 2 первое неполное делимое — 1.",ok:false,fix:"1 меньше 2, поэтому берём две цифры: первое неполное делимое — 14."},
+         {s:"Деление можно проверить умножением: частное · делитель = делимое.",ok:true}],
+     q:[{s:"Сколько цифр будет в частном 2 304 : 2?",a:"4",w:["3","2","5"]}]}],
+  example:{title:"Как записать в тетради: 14 232 : 2",lines:["14 232 | 2","Первое неполное делимое 14 → в частном 4 цифры.","14 : 2 → по 7;  7 · 2 = 14;  14 − 14 = 0","Сносим 2 → 2;  2 : 2 → по 1;  1 · 2 = 2;  2 − 2 = 0","Сносим 3 → 3;  3 : 2 → по 1;  1 · 2 = 2;  3 − 2 = 1","Сносим 2 → 12;  12 : 2 → по 6;  6 · 2 = 12;  12 − 12 = 0","Частное: 7 116.","Проверка: 7 116 · 2 = 14 232.","Ответ: 7 116."]},
+  gens:(function(){ const G=[
+   {f:(r,lv)=>{ const x=pickDiv(r,lv,lv===1?1:r.pick([1,2])); if(!x) return null; const {a,b,L}=x;
+     return inp({topic:"Письменное деление",prompt:"Вычисли столбиком:\n"+fm(a)+" : "+b,check:{kind:"num",ref:String(L.q)},answer:fm(L.q),
+       hints:["Найди первое неполное делимое: "+fm(L.first)+". В частном будет "+L.nq+" цифр"+(L.nq<5?"ы":"")+".","Дели по шагам: раздели, умножь, вычти, снеси следующую цифру.","Проверь умножением: частное · "+b+" должно дать "+fm(a)+"."],
+       solution:L.lines.concat(["Проверка: "+fm(L.q)+" · "+b+" = "+fm(a)+".","Ответ: "+fm(L.q)+"."])}); }},
+   {f:(r,lv)=>{ const x=pickDiv(r,Math.max(lv,2)); if(!x) return null; const {a,b,L}=x; const w=[String(Math.floor(a/Math.pow(10,String(a).length-1))),String(L.first*10+Number(String(a)[String(L.first).length]||0)),String(a).slice(0,String(L.first).length+1)].filter(v=>v!==String(L.first));
+     return quiz({topic:"Первое неполное делимое",prompt:"Какое первое неполное делимое в примере "+fm(a)+" : "+b+"?",options:C.numOpts(r,String(L.first),[...new Set(w)]),answer:String(L.first),
+       hints:["Бери цифры делимого слева, пока число не станет больше или равно "+b+"."],solution:["Первая цифра "+String(a)[0]+(Number(String(a)[0])<b?" меньше "+b+", поэтому берём две цифры: "+L.first+".":" не меньше "+b+", поэтому первое неполное делимое — "+L.first+"."),"Ответ: "+L.first+"."]}); }},
+   {f:(r,lv)=>{ const x=pickDiv(r,Math.max(lv,2)); if(!x) return null; const {a,b,L}=x;
+     return quiz({topic:"Количество цифр в частном",prompt:"Сколько цифр будет в частном "+fm(a)+" : "+b+"?",options:C.numOpts(r,String(L.nq),[String(L.nq+1),String(L.nq-1),String(String(a).length===L.nq?L.nq+2:String(a).length)].filter(v=>Number(v)>0)),answer:String(L.nq),
+       hints:["Найди первое неполное делимое, потом посчитай, сколько цифр осталось снести, и прибавь 1."],solution:["Первое неполное делимое — "+fm(L.first)+".","После него остаётся снести "+(L.nq-1)+" цифр"+(L.nq-1===1?"у":"ы")+": 1 + "+(L.nq-1)+" = "+L.nq+".","Ответ: "+L.nq+"."]}); }}
+  ]; return [G[0],G[0],G[0],G[1],G[2]]; })()});
+
 F.registerCourse({key:"math3",who:"tamina",subject:"math",title:"Математика 3 класс",book:"Карточки лицея №90 + Акпаева А.Б. и др. Математика 3 (Алматыкітап, 2026)",units,
-  mix:[{unit:"t6"},{unit:"t7"},{unit:"t8"},{unit:"t4"},{unit:"t5"},{unit:"t2"},{unit:"t1"},{unit:"t3"}],
+  mix:[{unit:"t12"},{unit:"t6"},{unit:"t7"},{unit:"t8"},{unit:"t4"},{unit:"t5"},{unit:"t2"},{unit:"t1"},{unit:"t3"}],
   mixExtra:["t9","t10","t11"]});
 })(typeof window!=="undefined"?window:globalThis);
 
