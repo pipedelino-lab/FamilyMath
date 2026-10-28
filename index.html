@@ -1523,7 +1523,10 @@ function stripLead(s){ s=String(s||"").trim().replace(/^\s*[a-zа-я]\s*=\s*/i,"
 function checkAnswer(item, raw){
   const c=item.check;
   if(!c) return {ok:false};
-  const given=String(raw||"").trim();
+  let given=String(raw||"").trim();
+  /* tolerate notebook-style wrappers: «Ответ: 120.», «x = 2910», trailing punctuation */
+  given=given.replace(/^(ответ|отв)\s*[:.\-–—]?\s*/i,"").replace(/[.,;!]+$/,"").trim();
+  if(c.kind==="num"||c.kind==="units") given=given.replace(/^[a-zа-яё]\s*=\s*(?=[-−+]?\d)/i,"").trim();
   if(!given) return {ok:false,empty:true};
   if(c.kind==="text"){
     const n=x=>String(x).toLowerCase().replace(/ё/g,"е").replace(/[\s.,!?"«»]/g,"");
@@ -2631,8 +2634,8 @@ U("t9","Доли",{
 U("t10","Умножение и деление столбиком",{
   rules:[{id:"m3col",title:"Умножение столбиком",text:"При умножении столбиком однозначный множитель пишут под единицами. Умножают, начиная с единиц: записывают единицы результата, а десятки запоминают и прибавляют к следующему разряду.",tf:[{s:"При умножении столбиком начинают с единиц.",ok:true}]}],
   gens:[
-   {f:(r,lv)=>{ const a=r.int(lv>1?102:12,lv>1?987:98), b=r.int(3,9); return inp({topic:"Столбиком",prompt:"Вычисли столбиком:\n"+a+" · "+b,check:{kind:"num",ref:String(a*b)},answer:fm(a*b),hints:["Начни с единиц: "+(a%10)+" · "+b+" = "+(a%10)*b+".","Не забудь прибавить запомненные десятки."],solution:[a+" · "+b+" = "+fm(a*b),"Проверка: "+fm(a*b)+" : "+b+" = "+a+".","Ответ: "+fm(a*b)+"."]}); }},
-   {f:(r,lv)=>{ const b=r.int(3,9), q=r.int(lv>1?102:12,lv>1?999:99); const a=b*q; return inp({topic:"Столбиком",prompt:"Вычисли столбиком:\n"+fm(a)+" : "+b,check:{kind:"num",ref:String(q)},answer:String(q),hints:["Найди первое неполное делимое.","Проверь умножением: частное · "+b+"."],solution:[fm(a)+" : "+b+" = "+q,"Проверка: "+q+" · "+b+" = "+fm(a)+".","Ответ: "+q+"."]}); }},
+   {f:(r,lv)=>{ const a=r.int(lv>1?102:12,lv>1?987:98), b=r.int(3,9); return inp({topic:"Столбиком",prompt:"Реши столбиком в тетради и запиши ответ:\n"+a+" · "+b,check:{kind:"num",ref:String(a*b)},answer:fm(a*b),hints:["Начни с единиц: "+(a%10)+" · "+b+" = "+(a%10)*b+".","Не забудь прибавить запомненные десятки."],solution:[a+" · "+b+" = "+fm(a*b),"Проверка: "+fm(a*b)+" : "+b+" = "+a+".","Ответ: "+fm(a*b)+"."]}); }},
+   {f:(r,lv)=>{ const b=r.int(3,9), q=r.int(lv>1?102:12,lv>1?999:99); const a=b*q; return inp({topic:"Столбиком",prompt:"Реши столбиком в тетради и запиши ответ:\n"+fm(a)+" : "+b,check:{kind:"num",ref:String(q)},answer:String(q),hints:["Найди первое неполное делимое.","Проверь умножением: частное · "+b+"."],solution:[fm(a)+" : "+b+" = "+q,"Проверка: "+q+" · "+b+" = "+fm(a)+".","Ответ: "+q+"."]}); }},
    {lv:[2,3],f:(r,lv)=>{ const a=r.int(110,2400), b=r.pick([20,30,40,50,60,70,80,90]); return inp({topic:"Столбиком",prompt:"Вычисли:\n"+fm(a)+" · "+b,check:{kind:"num",ref:String(a*b)},answer:fm(a*b),hints:["Умножь на "+b/10+", потом припиши 0.",fm(a)+" · "+b/10+" = "+fm(a*b/10)+"."],solution:[fm(a)+" · "+b+" = "+fm(a)+" · "+b/10+" · 10 = "+fm(a*b),"Ответ: "+fm(a*b)+"."]}); }}
   ]});
 
@@ -2667,7 +2670,7 @@ U("t12","Письменное деление на однозначное",{
   example:{title:"Как записать в тетради: 14 232 : 2",lines:["14 232 | 2","Первое неполное делимое 14 → в частном 4 цифры.","14 : 2 → по 7;  7 · 2 = 14;  14 − 14 = 0","Сносим 2 → 2;  2 : 2 → по 1;  1 · 2 = 2;  2 − 2 = 0","Сносим 3 → 3;  3 : 2 → по 1;  1 · 2 = 2;  3 − 2 = 1","Сносим 2 → 12;  12 : 2 → по 6;  6 · 2 = 12;  12 − 12 = 0","Частное: 7 116.","Проверка: 7 116 · 2 = 14 232.","Ответ: 7 116."]},
   gens:(function(){ const G=[
    {f:(r,lv)=>{ const x=pickDiv(r,lv,lv===1?1:r.pick([1,2])); if(!x) return null; const {a,b,L}=x;
-     return inp({topic:"Письменное деление",prompt:"Вычисли столбиком:\n"+fm(a)+" : "+b,check:{kind:"num",ref:String(L.q)},answer:fm(L.q),
+     return inp({topic:"Письменное деление",prompt:"Реши столбиком в тетради и запиши ответ:\n"+fm(a)+" : "+b,check:{kind:"num",ref:String(L.q)},answer:fm(L.q),
        hints:["Найди первое неполное делимое: "+fm(L.first)+". В частном будет "+L.nq+" цифр"+(L.nq<5?"ы":"")+".","Дели по шагам: раздели, умножь, вычти, снеси следующую цифру.","Проверь умножением: частное · "+b+" должно дать "+fm(a)+"."],
        solution:L.lines.concat(["Проверка: "+fm(L.q)+" · "+b+" = "+fm(a)+".","Ответ: "+fm(L.q)+"."])}); }},
    {f:(r,lv)=>{ const x=pickDiv(r,Math.max(lv,2)); if(!x) return null; const {a,b,L}=x; const w=[String(Math.floor(a/Math.pow(10,String(a).length-1))),String(L.first*10+Number(String(a)[String(L.first).length]||0)),String(a).slice(0,String(L.first).length+1)].filter(v=>v!==String(L.first));
