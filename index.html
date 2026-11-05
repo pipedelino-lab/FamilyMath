@@ -1730,6 +1730,258 @@ G.FMC={factGen,norm,pmul,padd,psub,pneg,ppow,S,E,par,lin,opts,numOpts,gcd,frac,f
 
 </script>
 <script>
+/* ===== Рисунки: SVG из данных задачи. FMFig.html(spec) -> строка <svg>. Спецификация — обычный JSON (хранится вместе с заданием). ===== */
+(function(G){
+"use strict";
+const C={ink:"#334155",blue:"#2563eb",bf:"#dbeafe",red:"#dc2626",rf:"#fee2e2",grn:"#16a34a",gf:"#dcfce7",gold:"#d97706",yf:"#fef3c7",grey:"#94a3b8",lt:"#f1f5f9",wood:"#b45309"};
+const esc=s=>String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+const r1=x=>Math.round(x*10)/10;
+const nf=v=>{ const s=String(Math.round(v*1e6)/1e6).replace(".",","); return s.replace("-","−"); };
+function wrap(w,h,body,max){ return '<svg viewBox="0 0 '+w+' '+h+'" class="fm-fig" role="img" xmlns="http://www.w3.org/2000/svg" style="width:100%;max-width:'+(max||Math.round(w*1.25))+'px;height:auto;display:block;margin:4px auto 10px">'+body+'</svg>'; }
+const T=(x,y,s,o)=>{ o=o||{}; return '<text x="'+r1(x)+'" y="'+r1(y)+'" font-size="'+(o.s||14)+'" text-anchor="'+(o.a||"middle")+'" fill="'+(o.c||C.ink)+'" font-weight="'+(o.w||600)+'" font-family="system-ui,Arial,sans-serif"'+(o.rot?' transform="rotate('+o.rot+' '+r1(x)+' '+r1(y)+')"':'')+'>'+esc(s)+'</text>'; };
+const L=(x1,y1,x2,y2,o)=>{ o=o||{}; return '<line x1="'+r1(x1)+'" y1="'+r1(y1)+'" x2="'+r1(x2)+'" y2="'+r1(y2)+'" stroke="'+(o.c||C.ink)+'" stroke-width="'+(o.w||2)+'"'+(o.d?' stroke-dasharray="'+o.d+'"':'')+' stroke-linecap="round"/>'; };
+const R=(x,y,w,h,o)=>{ o=o||{}; return '<rect x="'+r1(x)+'" y="'+r1(y)+'" width="'+r1(w)+'" height="'+r1(h)+'" fill="'+(o.f||"none")+'" stroke="'+(o.c===undefined?C.ink:o.c)+'" stroke-width="'+(o.w||2)+'"'+(o.rx?' rx="'+o.rx+'"':'')+'/>'; };
+const CI=(x,y,r,o)=>{ o=o||{}; return '<circle cx="'+r1(x)+'" cy="'+r1(y)+'" r="'+r1(r)+'" fill="'+(o.f||"none")+'" stroke="'+(o.c===undefined?C.ink:o.c)+'" stroke-width="'+(o.w===undefined?2:o.w)+'"'+(o.d?' stroke-dasharray="'+o.d+'"':'')+'/>'; };
+const P=(pts,o)=>{ o=o||{}; return '<polyline points="'+pts.map(p=>r1(p[0])+","+r1(p[1])).join(" ")+'" fill="'+(o.f||"none")+'" stroke="'+(o.c||C.ink)+'" stroke-width="'+(o.w||2)+'" stroke-linejoin="round" stroke-linecap="round"'+(o.d?' stroke-dasharray="'+o.d+'"':'')+'/>'; };
+const PG=(pts,o)=>{ o=o||{}; return '<polygon points="'+pts.map(p=>r1(p[0])+","+r1(p[1])).join(" ")+'" fill="'+(o.f||"none")+'" stroke="'+(o.c===undefined?C.ink:o.c)+'" stroke-width="'+(o.w===undefined?2:o.w)+'" stroke-linejoin="round"/>'; };
+const PATH=(d,o)=>{ o=o||{}; return '<path d="'+d+'" fill="'+(o.f||"none")+'" stroke="'+(o.c===undefined?C.ink:o.c)+'" stroke-width="'+(o.w===undefined?2:o.w)+'" stroke-linecap="round" stroke-linejoin="round"'+(o.d?' stroke-dasharray="'+o.d+'"':'')+'/>'; };
+function arrow(x1,y1,x2,y2,o){ o=o||{}; const a=Math.atan2(y2-y1,x2-x1), h=o.h||9; const c=o.c||C.ink;
+  return L(x1,y1,x2,y2,{c,w:o.w||2.5,d:o.d})+PG([[x2,y2],[x2-h*Math.cos(a-0.4),y2-h*Math.sin(a-0.4)],[x2-h*Math.cos(a+0.4),y2-h*Math.sin(a+0.4)]],{f:c,c}); }
+function arc(cx,cy,r,a1,a2,o){ /* углы экрана, рад; короткая дуга */ let d=a2-a1; while(d>Math.PI) d-=2*Math.PI; while(d<=-Math.PI) d+=2*Math.PI;
+  const x1=cx+r*Math.cos(a1), y1=cy+r*Math.sin(a1), x2=cx+r*Math.cos(a1+d), y2=cy+r*Math.sin(a1+d);
+  return PATH("M"+r1(x1)+" "+r1(y1)+" A"+r+" "+r+" 0 0 "+(d>0?1:0)+" "+r1(x2)+" "+r1(y2),o); }
+const rad=d=>d*Math.PI/180;
+const pol=(cx,cy,r,deg)=>[cx+r*Math.cos(rad(-deg)),cy+r*Math.sin(rad(-deg))]; /* градусы «математические» (вверх=+) */
+
+/* ---------- треугольник ---------- */
+function triPts(sp,W,H,pad){
+  let A,B,Cc;
+  if(sp.sides){ const a=sp.sides[0],b=sp.sides[1],c=sp.sides[2]; A=[0,0]; B=[c,0]; const cx=(b*b+c*c-a*a)/(2*c); Cc=[cx,Math.sqrt(Math.max(0,b*b-cx*cx))]; }
+  else { const a=rad(sp.angA),b=rad(sp.angB),g=Math.PI-a-b; const AC=Math.sin(b)/Math.sin(g); A=[0,0]; B=[1,0]; Cc=[AC*Math.cos(a),AC*Math.sin(a)]; }
+  const pts=[A,B,Cc]; if(sp.ext){ const v=sp.ext==="C"?[Cc,B]:sp.ext==="A"?[A,B]:[B,A]; const d=[v[0][0]-v[1][0],v[0][1]-v[1][1]]; const l=Math.hypot(d[0],d[1]); pts.push([v[0][0]+d[0]/l*0.32*Math.max(1,l),v[0][1]+d[1]/l*0.32*Math.max(1,l)]); }
+  const xs=pts.map(p=>p[0]),ys=pts.map(p=>p[1]); const minx=Math.min(...xs),maxx=Math.max(...xs),miny=Math.min(...ys),maxy=Math.max(...ys);
+  const s=Math.min((W-2*pad)/(maxx-minx||1),(H-2*pad)/(maxy-miny||1)); const ox=(W-s*(maxx-minx))/2, oy=(H-s*(maxy-miny))/2;
+  const m=p=>[ox+(p[0]-minx)*s, H-oy-(p[1]-miny)*s];
+  return {A:m(A),B:m(B),C:m(Cc),X:pts.length>3?m(pts[3]):null};
+}
+function figTri(sp){
+  const W=320,H=sp.h||220,pad=sp.pad||44; const q=triPts(sp,W,H,pad); const nm=sp.names||["A","B","C"]; const V={A:q.A,B:q.B,C:q.C};
+  const cen=[(q.A[0]+q.B[0]+q.C[0])/3,(q.A[1]+q.B[1]+q.C[1])/3]; let b="";
+  b+=PG([q.A,q.B,q.C],{f:C.bf+"88",c:C.ink,w:2.5});
+  const out=(p,k)=>{ const d=[p[0]-cen[0],p[1]-cen[1]]; const l=Math.hypot(d[0],d[1])||1; return [p[0]+d[0]/l*k,p[1]+d[1]/l*k]; };
+  const seg=(s)=>[V[s[0]],V[s[1]]];
+  if(sp.eq) sp.eq.forEach((grp,gi)=>grp.forEach(s=>{ if(!V[s[0]]||!V[s[1]]) return; const [p1,p2]=seg(s); const mx=(p1[0]+p2[0])/2,my=(p1[1]+p2[1])/2; const a=Math.atan2(p2[1]-p1[1],p2[0]-p1[0]); const n=gi+1; for(let k=0;k<n;k++){ const off=(k-(n-1)/2)*6; const cx=mx+off*Math.cos(a),cy=my+off*Math.sin(a); b+=L(cx-5*Math.sin(a),cy+5*Math.cos(a),cx+5*Math.sin(a),cy-5*Math.cos(a),{c:C.red,w:2.5}); } }));
+  if(sp.right){ const k=sp.right, o=V[k], oth=["A","B","C"].filter(x=>x!==k).map(x=>V[x]); const u=oth.map(p=>{ const d=[p[0]-o[0],p[1]-o[1]]; const l=Math.hypot(d[0],d[1]); return [d[0]/l*14,d[1]/l*14]; }); b+=P([[o[0]+u[0][0],o[1]+u[0][1]],[o[0]+u[0][0]+u[1][0],o[1]+u[0][1]+u[1][1]],[o[0]+u[1][0],o[1]+u[1][1]]],{c:C.ink,w:2}); }
+  const lines=sp.lines||[]; lines.forEach(ln=>{ const f=V[ln.from]; const o2=["A","B","C"].filter(x=>x!==ln.from); const p=V[o2[0]],qq=V[o2[1]]; let foot;
+    if(ln.kind==="med") foot=[(p[0]+qq[0])/2,(p[1]+qq[1])/2];
+    else if(ln.kind==="alt"){ const d=[qq[0]-p[0],qq[1]-p[1]]; const t=((f[0]-p[0])*d[0]+(f[1]-p[1])*d[1])/(d[0]*d[0]+d[1]*d[1]); foot=[p[0]+t*d[0],p[1]+t*d[1]]; }
+    else { const lp=Math.hypot(p[0]-f[0],p[1]-f[1]), lq=Math.hypot(qq[0]-f[0],qq[1]-f[1]); const t=lp/(lp+lq); foot=[p[0]+t*(qq[0]-p[0]),p[1]+t*(qq[1]-p[1])]; }
+    b+=L(f[0],f[1],foot[0],foot[1],{c:ln.color||C.blue,w:2.5,d:ln.kind==="alt"?"6 4":null});
+    if(ln.kind==="alt"){ const d=[qq[0]-p[0],qq[1]-p[1]]; const l=Math.hypot(d[0],d[1]); const u=[d[0]/l*10,d[1]/l*10]; const v=[f[0]-foot[0],f[1]-foot[1]]; const lv=Math.hypot(v[0],v[1]); const w2=[v[0]/lv*10,v[1]/lv*10]; const sg=((p[0]-foot[0])*u[0]+(p[1]-foot[1])*u[1])>0?-1:1; b+=P([[foot[0]+sg*u[0],foot[1]+sg*u[1]],[foot[0]+sg*u[0]+w2[0],foot[1]+sg*u[1]+w2[1]],[foot[0]+w2[0],foot[1]+w2[1]]],{c:C.blue,w:1.8}); }
+    if(ln.kind==="med"){ [[p,foot],[foot,qq]].forEach(([a1,a2])=>{ const mx=(a1[0]+a2[0])/2,my=(a1[1]+a2[1])/2; const a=Math.atan2(a2[1]-a1[1],a2[0]-a1[0]); b+=L(mx-5*Math.sin(a),my+5*Math.cos(a),mx+5*Math.sin(a),my-5*Math.cos(a),{c:C.blue,w:2.5}); }); }
+    if(ln.kind==="bis"){ [[f,p,foot],[f,qq,foot]].forEach(([vv,s2,ft],i)=>{ const a1=Math.atan2(s2[1]-vv[1],s2[0]-vv[0]),a2=Math.atan2(ft[1]-vv[1],ft[0]-vv[0]); b+=arc(vv[0],vv[1],26+i*5,a1,a2,{c:C.blue,w:2}); }); }
+    if(ln.name){ const dv=[foot[0]-cen[0],foot[1]-cen[1]]; const dl=Math.hypot(dv[0],dv[1])||1; b+=T(foot[0]+dv[0]/dl*13,foot[1]+dv[1]/dl*13+5,ln.name,{s:15,w:800}); } });
+  if(sp.ext){ const o=V[sp.ext]; const oth=sp.ext==="C"?V.B:sp.ext==="A"?V.B:V.A; const a1=Math.atan2(q.X[1]-o[1],q.X[0]-o[0]); const nb=sp.ext==="C"?V.A:sp.ext==="A"?V.C:V.C; const a2=Math.atan2(nb[1]-o[1],nb[0]-o[0]);
+    b+=L(o[0],o[1],q.X[0],q.X[1],{c:C.ink,w:2.5}); b+=arc(o[0],o[1],26,a1,a2,{c:C.red,w:2.5}); const am=Math.atan2(Math.sin(a1)+Math.sin(a2),Math.cos(a1)+Math.cos(a2)); if(sp.extLabel) b+=T(o[0]+42*Math.cos(am),o[1]+42*Math.sin(am)+5,sp.extLabel,{c:C.red,s:15}); }
+  ["A","B","C"].forEach((k,i)=>{ const p=V[k]; const o=out(p,16); b+=T(o[0],o[1]+5,nm[i],{s:16,w:800}); });
+  const ang=sp.ang||{}; ["A","B","C"].forEach(k=>{ if(!ang[k]) return; const p=V[k]; const o2=["A","B","C"].filter(x=>x!==k).map(x=>V[x]); const a1=Math.atan2(o2[0][1]-p[1],o2[0][0]-p[0]),a2=Math.atan2(o2[1][1]-p[1],o2[1][0]-p[0]); const am=Math.atan2(Math.sin(a1)+Math.sin(a2),Math.cos(a1)+Math.cos(a2)); const hot=ang[k]==="?"; if(sp.right!==k) b+=arc(p[0],p[1],20,a1,a2,{c:hot?C.red:C.blue,w:2});
+    let dd=Math.abs(a1-a2); while(dd>Math.PI) dd=2*Math.PI-dd; const rl=sp.right===k?30:(dd<0.75?62:(dd<1.1?46:38)); b+=T(p[0]+rl*Math.cos(am),p[1]+rl*Math.sin(am)+5,ang[k],{c:hot?C.red:C.blue,s:15,w:800}); });
+  const sd=sp.sides_l||{}; Object.keys(sd).forEach(s=>{ const [p1,p2]=seg(s); const mx=(p1[0]+p2[0])/2,my=(p1[1]+p2[1])/2; const d=[mx-cen[0],my-cen[1]]; const l=Math.hypot(d[0],d[1])||1; const kk=(sp.eq&&sp.eq.length)||(sp.lines&&sp.lines.length)?32:26; b+=T(mx+d[0]/l*kk,my+d[1]/l*kk+5,sd[s],{c:sd[s]==="?"?C.red:C.ink,s:15,w:800}); });
+  return wrap(W,H,b,sp.max||340);
+}
+
+/* ---------- прямые ---------- */
+function figCross(sp){ const W=320,H=210,cx=160,cy=105,th=sp.th||50; let b=""; const R0=92;
+  [0,th].forEach(a=>{ const p1=pol(cx,cy,R0,a),p2=pol(cx,cy,R0,a+180); b+=L(p1[0],p1[1],p2[0],p2[1],{w:2.5}); });
+  const secs=[[0,th],[th,180],[180,180+th],[180+th,360]]; const lab=sp.lab||[];
+  secs.forEach((s,i)=>{ const mid=(s[0]+s[1])/2; const a1=rad(-s[0]),a2=rad(-s[1]); const hot=lab[i]==="?"||/x/.test(String(lab[i]));
+    if(lab[i]) { b+=arc(cx,cy,24+(i%2)*6,a1,a2,{c:hot?C.red:C.blue,w:2}); const p=pol(cx,cy,(s[1]-s[0]<60?60:46),mid); b+=T(p[0],p[1]+5,lab[i],{c:hot?C.red:C.blue,s:15,w:800}); } });
+  const nm=sp.names; if(nm){ [[0,0],[th,1],[180,2],[180+th,3]].forEach(([a,i])=>{ if(!nm[i]) return; const p=pol(cx,cy,R0+13,a); b+=T(p[0],p[1]+5,nm[i],{s:15,w:800}); }); b+=T(cx+10,cy+18,sp.o||"",{s:14}); }
+  return wrap(W,H,b,330); }
+function figPar(sp){ const W=320,H=230,th=sp.th||60,y1=70,y2=160,x0=40,x1=280; let b=L(x0,y1,x1,y1,{w:2.5})+L(x0,y2,x1,y2,{w:2.5});
+  b+=arrow(x1-6,y1,x1,y1,{h:8})+arrow(x1-6,y2,x1,y2,{h:8});
+  const dx=(y2-y1)/Math.tan(rad(th)); const px=160+dx/2, qx=160-dx/2; /* P сверху, Q снизу: трансверсаль идёт вверх-вправо */ const Px=160+dx/2, Qx=160-dx/2;
+  const tp1=[Qx-(y2-y1)*0.0,y2],tp2=[Px,y1]; const ext=0.45; const ux=(Px-Qx),uy=(y1-y2); const l=Math.hypot(ux,uy);
+  b+=L(Qx-ux/l*ext*100,y2-uy/l*ext*100,Px+ux/l*ext*100,y1+uy/l*ext*100,{w:2.5});
+  const lab=sp.lab||[]; const cs=[[Px,y1],[Qx,y2]];
+  cs.forEach(([cx,cy],ci)=>{ const secs=[[0,th],[th,180],[180,180+th],[180+th,360]]; secs.forEach((s,i)=>{ const t=lab[ci*4+i]; if(!t) return; const mid=(s[0]+s[1])/2; const hot=/\?|x/.test(String(t)); b+=arc(cx,cy,20,rad(-s[0]),rad(-s[1]),{c:hot?C.red:C.blue,w:2}); const p=pol(cx,cy,(s[1]-s[0]<70?44:34),mid); b+=T(p[0],p[1]+5,t,{c:hot?C.red:C.blue,s:14,w:800}); }); });
+  b+=T(x0-14,y1+5,sp.a||"a",{s:16,w:800})+T(x0-14,y2+5,sp.b||"b",{s:16,w:800});
+  if(sp.c) b+=T(Px+ux/l*ext*100+14,y1+uy/l*ext*100-2,sp.c,{s:16,w:800});
+  if(sp.pts){ b+=T(Px+16,y1-10,sp.pts[0],{s:15,w:800})+T(Qx-16,y2+20,sp.pts[1],{s:15,w:800}); }
+  return wrap(W,H,b,340); }
+function figSeg(sp){ const W=320,H=110; const pts=sp.pts; const mn=pts[0][1],mx=pts[pts.length-1][1]; const sx=v=>30+(v-mn)/(mx-mn)*260; let b=L(sx(mn)-14,56,sx(mx)+14,56,{w:2.5});
+  pts.forEach(p=>{ b+=L(sx(p[1]),46,sx(p[1]),66,{w:2.5})+T(sx(p[1]),90,p[0],{s:17,w:800}); });
+  (sp.lens||[]).forEach(l=>{ const a=sx(pts[l[0]][1]),c=sx(pts[l[1]][1]); b+=PATH("M"+a+" 36 Q"+(a+c)/2+" 14 "+c+" 36",{c:l[3]==="?"?C.red:C.blue,w:2})+T((a+c)/2,20,l[2],{c:l[2]==="?"?C.red:C.blue,s:15,w:800}); });
+  return wrap(W,H,b,340); }
+function figAngle(sp){ const W=320,H=180,ox=60,oy=150,th=sp.th; let b=""; const p1=[ox+220,oy], p2=pol(ox,oy,220*0.9,th);
+  b+=arrow(ox,oy,p1[0],p1[1],{h:8})+arrow(ox,oy,p2[0],p2[1],{h:8});
+  b+=arc(ox,oy,50,0,rad(-th),{c:C.blue,w:2.5}); const pm=pol(ox,oy,sp.bis?96:76,sp.bis?th*0.8:th/2); b+=T(pm[0],pm[1]+5,sp.lab||"",{c:sp.lab==="?"?C.red:C.blue,s:16,w:800});
+  if(sp.bis){ const pb=pol(ox,oy,200,th/2); b+=L(ox,oy,pb[0],pb[1],{c:C.red,w:2.5,d:"6 4"}); b+=arc(ox,oy,36,0,rad(-th/2),{c:C.red,w:2}); b+=arc(ox,oy,42,rad(-th/2),rad(-th),{c:C.red,w:2}); }
+  b+=T(ox-12,oy+16,sp.o||"O",{s:15,w:800}); if(sp.n){ b+=T(p1[0]+10,oy+6,sp.n[0],{s:15,w:800})+T(p2[0]+8,p2[1]-6,sp.n[1],{s:15,w:800}); }
+  return wrap(W,H,b,340); }
+function figCirc(sp){ const W=320,H=240,cx=160,cy=120; let b="";
+  if(sp.tri){ const q=triPts(sp.tri,200,200,18); const sh=(p)=>[p[0]+60,p[1]+20]; const A=sh(q.A),B=sh(q.B),Cc=sh(q.C);
+    const ax=A[0],ay=A[1],bx=B[0],by=B[1],cx2=Cc[0],cy2=Cc[1]; const d=2*(ax*(by-cy2)+bx*(cy2-ay)+cx2*(ay-by)); const ux=((ax*ax+ay*ay)*(by-cy2)+(bx*bx+by*by)*(cy2-ay)+(cx2*cx2+cy2*cy2)*(ay-by))/d, uy=((ax*ax+ay*ay)*(cx2-bx)+(bx*bx+by*by)*(ax-cx2)+(cx2*cx2+cy2*cy2)*(bx-ax))/d; const Rr=Math.hypot(ax-ux,ay-uy);
+    const a=Math.hypot(bx-cx2,by-cy2),bb=Math.hypot(ax-cx2,ay-cy2),c=Math.hypot(ax-bx,ay-by); const per=a+bb+c; const ix=(a*ax+bb*bx+c*cx2)/per, iy=(a*ay+bb*by+c*cy2)/per; const area=Math.abs((bx-ax)*(cy2-ay)-(cx2-ax)*(by-ay))/2; const rin=2*area/per;
+    if(sp.mode==="out"){ b+=CI(ux,uy,Rr,{f:C.bf+"66",c:C.blue,w:2.5})+PG([A,B,Cc],{f:"none",c:C.ink,w:2.5})+CI(ux,uy,3,{f:C.red,c:C.red}); b+=T(ux+8,uy-6,sp.o||"O",{s:14,c:C.red,w:800}); }
+    else { b+=PG([A,B,Cc],{f:C.bf+"66",c:C.ink,w:2.5})+CI(ix,iy,rin,{c:C.blue,w:2.5})+CI(ix,iy,3,{f:C.red,c:C.red}); b+=T(ix+10,iy-6,sp.o||"O",{s:14,c:C.red,w:800}); }
+    const nm=sp.names||["A","B","C"]; [A,B,Cc].forEach((p,i)=>{ const o=[ (p[0]-(A[0]+B[0]+Cc[0])/3), (p[1]-(A[1]+B[1]+Cc[1])/3)]; const l=Math.hypot(o[0],o[1]); b+=T(p[0]+o[0]/l*14,p[1]+o[1]/l*14+5,nm[i],{s:15,w:800}); });
+    return wrap(W,H,b,340); }
+  const r=sp.r||80; b+=CI(cx,cy,r,{f:C.bf+"55",c:C.blue,w:2.5}); b+=CI(cx,cy,3,{f:C.red,c:C.red}); b+=T(cx-10,cy+16,"O",{s:15,w:800});
+  (sp.show||[]).forEach(s=>{ if(s[0]==="r"){ const p=pol(cx,cy,r,s[1]||35); b+=L(cx,cy,p[0],p[1],{c:C.red,w:2.5}); const m=pol(cx,cy,r+30,s[1]||35); b+=T(m[0],m[1]+5,s[2]||"",{c:C.red,s:15,w:800}); }
+    if(s[0]==="d"){ const p1=pol(cx,cy,r,s[1]||160),p2=pol(cx,cy,r,(s[1]||160)+180); b+=L(p1[0],p1[1],p2[0],p2[1],{c:C.red,w:2.5}); const m=pol(cx,cy,r+30,(s[1]||160)); b+=T(m[0],m[1]+5,s[2]||"",{c:C.red,s:15,w:800}); }
+    if(s[0]==="c"){ const p1=pol(cx,cy,r,s[1]),p2=pol(cx,cy,r,s[2]); b+=L(p1[0],p1[1],p2[0],p2[1],{c:C.blue,w:2.5}); const m=[(p1[0]+p2[0])/2,(p1[1]+p2[1])/2]; b+=T(m[0],m[1]+(s[4]||18),s[3]||"",{c:C.blue,s:15,w:800}); }
+    if(s[0]==="p"){ const p=pol(cx,cy,r,s[1]); b+=CI(p[0],p[1],3.5,{f:C.ink,c:C.ink}); const o=pol(cx,cy,r+14,s[1]); b+=T(o[0],o[1]+5,s[2],{s:15,w:800}); } });
+  return wrap(W,H,b,340); }
+function figCirc2(sp){ const W=320,H=190,sc=sp.sc||12; const r1_=sp.r1*sc,r2=sp.r2*sc,d=sp.d*sc; const tot=r1_+d+r2; const x0=(W-Math.max(tot,r1_*2))/2+ (sp.d<Math.abs(sp.r1-sp.r2)?0:0); const c1=[ (W-(r1_+d+r2))/2 + r1_, 92]; const c2=[c1[0]+d,92];
+  let b=CI(c1[0],c1[1],r1_,{f:C.bf+"66",c:C.blue,w:2.5})+CI(c2[0],c2[1],r2,{f:C.gf+"88",c:C.grn,w:2.5})+CI(c1[0],c1[1],3,{f:C.blue,c:C.blue})+CI(c2[0],c2[1],3,{f:C.grn,c:C.grn});
+  b+=L(c1[0],c1[1],c2[0],c2[1],{c:C.red,w:2,d:"5 4"}); b+=T(c1[0]-4,c1[1]+18,"O₁",{s:14,c:C.blue})+T(c2[0]+4,c2[1]+18,"O₂",{s:14,c:C.grn});
+  b+=T(c1[0],c1[1]-r1_-8,"R₁ = "+nf(sp.r1),{c:C.blue,s:14,w:800})+T(c2[0],c2[1]+r2+18,"R₂ = "+nf(sp.r2),{c:C.grn,s:14,w:800});
+  if(!sp.hideD) b+=T(W/2,H-6,"O₁O₂ = "+nf(sp.d),{c:C.red,s:15,w:800}); else b+=T(W/2,H-6,"O₁O₂ = ?",{c:C.red,s:15,w:800});
+  return wrap(W,H,b,340); }
+
+/* ---------- приборы ---------- */
+function figVScale(sp){ /* kind: cyl | thermo | dyn */ const W=300,H=250,top=24,bot=214; const mn=sp.min,mx=sp.max; const y=v=>bot-(v-mn)/(mx-mn)*(bot-top); let b=""; const x0=sp.kind==="dyn"?100:110, wd=70;
+  if(sp.kind==="thermo"){ b+=R(x0+22,top-8,26,bot-top+16,{f:"#fff",rx:13,w:2.5})+CI(x0+35,bot+22,16,{f:C.red,w:2.5})+R(x0+30,y(sp.val),10,bot+10-y(sp.val),{f:C.red,c:C.red,w:0}); }
+  else if(sp.kind==="dyn"){ b+=R(x0,top-6,wd,bot-top+22,{f:C.lt,rx:8,w:2.5}); b+=L(x0+wd/2,top-22,x0+wd/2,top-6,{w:3}); b+=CI(x0+wd/2,top-26,5,{w:2.5}); b+=L(x0+wd/2,bot+16,x0+wd/2,bot+36,{w:3}); b+=R(x0+wd/2-16,bot+36,32,22,{f:C.yf,c:C.gold,w:2}); b+=L(x0+6,y(sp.val),x0+wd-6,y(sp.val),{c:C.red,w:3.5}); }
+  else { b+=PATH("M"+x0+" "+(top-10)+" L"+x0+" "+bot+" Q"+x0+" "+(bot+10)+" "+(x0+10)+" "+(bot+10)+" L"+(x0+wd-10)+" "+(bot+10)+" Q"+(x0+wd)+" "+(bot+10)+" "+(x0+wd)+" "+bot+" L"+(x0+wd)+" "+(top-10),{c:C.ink,w:2.5}); b+=R(x0+2,y(sp.val),wd-4,bot+8-y(sp.val),{f:C.blue+"55",c:C.blue,w:0}); b+=L(x0+2,y(sp.val),x0+wd-2,y(sp.val),{c:C.blue,w:2.5}); }
+  const tx=x0+(sp.kind==="thermo"?52:wd+0);
+  for(let v=mn; v<=mx+1e-9; v=Math.round((v+sp.step)*1e6)/1e6){ const major=sp.labels&&sp.labels.some(l=>Math.abs(l-v)<1e-9); b+=L(tx,y(v),tx+(major?16:9),y(v),{w:major?2.5:1.8}); if(major) b+=T(tx+20,y(v)+5,nf(v),{a:"start",s:14,w:800}); }
+  if(sp.unit) b+=T(tx+20,top-8,sp.unit,{a:"start",s:14,w:800,c:C.grey});
+  return wrap(W,H,b,300); }
+function figRuler(sp){ const W=320,H=130,x0=20,x1=300; const sx=v=>x0+(v-sp.min)/(sp.max-sp.min)*(x1-x0); let b=R(x0-6,60,x1-x0+12,40,{f:C.yf,c:C.gold,w:2});
+  for(let v=sp.min; v<=sp.max+1e-9; v=Math.round((v+sp.step)*1e6)/1e6){ const major=sp.labels&&sp.labels.some(l=>Math.abs(l-v)<1e-9); b+=L(sx(v),60,sx(v),60+(major?18:10),{w:major?2.2:1.5}); if(major) b+=T(sx(v),92,nf(v),{s:13,w:800}); }
+  if(sp.unit) b+=T(x1-2,116,sp.unit,{a:"end",s:13,c:C.grey});
+  if(sp.obj){ const a=sx(sp.obj[0]),c=sx(sp.obj[1]); b+=R(a,28,c-a,24,{f:C.bf,c:C.blue,w:2.5,rx:3}); b+=L(a,16,a,60,{c:C.red,w:1.5,d:"3 3"})+L(c,16,c,60,{c:C.red,w:1.5,d:"3 3"}); }
+  return wrap(W,H,b,340); }
+
+/* ---------- график ---------- */
+function figGraph(sp){ const W=sp.w||320,H=sp.h||250; const pl=sp.cross?20:46,pr=16,pt=16,pb=sp.cross?20:40; const xr=sp.xr,yr=sp.yr; const sx=v=>pl+(v-xr[0])/(xr[1]-xr[0])*(W-pl-pr); const sy=v=>H-pb-(v-yr[0])/(yr[1]-yr[0])*(H-pt-pb); let b="";
+  const xs=sp.xs||1,ys=sp.ys||1; const clipId="c"+Math.floor(Math.random()*1e6);
+  for(let v=Math.ceil(xr[0]/xs)*xs; v<=xr[1]+1e-9; v=Math.round((v+xs)*1e6)/1e6) b+=L(sx(v),sy(yr[0]),sx(v),sy(yr[1]),{c:"#e2e8f0",w:1});
+  for(let v=Math.ceil(yr[0]/ys)*ys; v<=yr[1]+1e-9; v=Math.round((v+ys)*1e6)/1e6) b+=L(sx(xr[0]),sy(v),sx(xr[1]),sy(v),{c:"#e2e8f0",w:1});
+  const ax=sp.cross?sx(0):sx(xr[0]), ay=sp.cross?sy(0):sy(yr[0]);
+  b+=arrow(sx(xr[0])-(sp.cross?0:0),ay,sx(xr[1])+6,ay,{h:8,w:2})+arrow(ax,sy(yr[0]),ax,sy(yr[1])-6,{h:8,w:2});
+  const tkx=sp.tx||xs, tky=sp.ty||ys;
+  for(let v=Math.ceil(xr[0]/tkx)*tkx; v<=xr[1]+1e-9; v=Math.round((v+tkx)*1e6)/1e6){ if(sp.cross&&Math.abs(v)<1e-9) continue; b+=L(sx(v),ay-3,sx(v),ay+3,{w:1.6})+T(sx(v),ay+15,nf(v),{s:12,w:600}); }
+  for(let v=Math.ceil(yr[0]/tky)*tky; v<=yr[1]+1e-9; v=Math.round((v+tky)*1e6)/1e6){ if(sp.cross&&Math.abs(v)<1e-9) continue; b+=L(ax-3,sy(v),ax+3,sy(v),{w:1.6})+T(ax-6,sy(v)+4,nf(v),{a:"end",s:12,w:600}); }
+  if(sp.cross) b+=T(ax-6,ay+14,"0",{a:"end",s:12});
+  if(sp.xl) b+=T(W-pr,ay+(sp.cross?-8:30),sp.xl,{a:"end",s:13,w:800,c:C.ink}); if(sp.yl) b+=T(ax+10,pt+6,sp.yl,{a:"start",s:13,w:800});
+  const cols=[C.blue,C.red,C.grn,C.gold];
+  (sp.lines||[]).forEach((ln,i)=>{ const col=ln.c||cols[i%4]; const segs=ln.segs||[ln.pts]; segs.forEach(pp=>{ b+=P(pp.map(p=>[sx(p[0]),sy(p[1])]),{c:col,w:3,d:ln.d}); }); if(ln.label){ const lp=ln.lp||segs[0][segs[0].length-1]; b+=T(sx(lp[0])+(ln.dx===undefined?-4:ln.dx),sy(lp[1])+(ln.dy===undefined?-8:ln.dy),ln.label,{c:col,s:14,w:800,a:"end"}); } });
+  (sp.dots||[]).forEach(d=>{ if(d.proj){ b+=L(sx(d.x),sy(d.y),sx(d.x),ay,{c:C.grey,w:1.5,d:"4 3"})+L(sx(d.x),sy(d.y),ax,sy(d.y),{c:C.grey,w:1.5,d:"4 3"}); } b+=CI(sx(d.x),sy(d.y),4.5,{f:d.c||C.red,c:"#fff",w:1.5}); if(d.l){ const left=sx(d.x)>W-80; b+=T(sx(d.x)+(d.dx===undefined?(left?-8:8):d.dx),sy(d.y)+(d.dy===undefined?(left?16:-8):d.dy),d.l,{a:left?"end":"start",s:14,w:800,c:d.c||C.ink}); } });
+  return wrap(W,H,b,sp.max||360); }
+function figBars(sp){ const W=320,H=220,pl=40,pb=40,pt=20; const n=sp.vals.length; const mx=sp.max||Math.max(...sp.vals); const bw=(W-pl-14)/n; const sy=v=>H-pb-v/mx*(H-pb-pt); let b=L(pl,H-pb,W-8,H-pb,{w:2})+L(pl,pt-6,pl,H-pb,{w:2});
+  const step=sp.step||Math.max(1,Math.ceil(mx/5)); for(let v=0; v<=mx; v+=step){ b+=L(pl-3,sy(v),pl,sy(v),{w:1.6})+T(pl-6,sy(v)+4,String(v),{a:"end",s:12})+(v>0?L(pl,sy(v),W-8,sy(v),{c:"#e2e8f0",w:1}):""); }
+  sp.vals.forEach((v,i)=>{ const x=pl+i*bw+bw*0.15; const hot=sp.hot===i; b+=R(x,sy(v),bw*0.7,H-pb-sy(v),{f:hot?C.rf:C.bf,c:hot?C.red:C.blue,w:2}); if(!sp.hideVals) b+=T(x+bw*0.35,sy(v)-5,String(v),{s:12,w:800}); b+=T(x+bw*0.35,H-pb+16,String(sp.labs[i]),{s:12,w:700}); });
+  if(sp.xl) b+=T(W/2,H-6,sp.xl,{s:12,c:C.grey}); return wrap(W,H,b,340); }
+
+/* ---------- механика ---------- */
+function figLever(sp){ const W=320,H=190,x0=20,x1=300,y=100; const sx=v=>x0+(v/sp.len)*(x1-x0); let b=R(x0,y-6,x1-x0,12,{f:C.yf,c:C.wood,w:2.5,rx:3});
+  const fx=sx(sp.fulcrum); b+=PG([[fx,y+6],[fx-18,y+44],[fx+18,y+44]],{f:C.lt,c:C.ink,w:2.5})+T(fx,y+62,"опора",{s:12,c:C.grey});
+  (sp.loads||[]).forEach(l=>{ const px=sx(l.pos); const col=l.c||(l.down?C.red:C.blue);
+    if(l.down){ b+=arrow(px,y-62,px,y-8,{c:col,w:3}); b+=T(px,y-70,l.label,{c:col,s:14,w:800}); }
+    else { b+=arrow(px,y+60,px,y+8,{c:col,w:3}); b+=T(px,y+76,l.label,{c:col,s:14,w:800}); } });
+  if(sp.dims){ const d=sp.dims; d.forEach((dm,i)=>{ const a=sx(dm[0]),c=sx(dm[1]); const yy=y+24+(i%2)*14; b+=L(a,yy,c,yy,{c:C.grn,w:1.8})+L(a,yy-4,a,yy+4,{c:C.grn,w:1.8})+L(c,yy-4,c,yy+4,{c:C.grn,w:1.8})+T((a+c)/2,yy+(i%2?16:-4),dm[2],{c:C.grn,s:13,w:800}); }); }
+  return wrap(W,H,b,340); }
+function figIncline(sp){ const W=320,H=210,a=sp.ang||30; const bx=40,by=170,len=240; const hx=bx+len*Math.cos(rad(a)), hy=by-len*Math.sin(rad(a)); let b=PG([[bx,by],[bx+len*Math.cos(rad(a)),by],[hx,hy]],{f:C.lt,c:C.ink,w:2.5});
+  const t=0.5; const px=hx-(hx-bx)*t, py=hy+(by-hy)*t; const u=[Math.cos(rad(a)),-Math.sin(rad(a))]; const n=[Math.sin(rad(a)),Math.cos(rad(a))]; /* вдоль подъёма и нормаль наружу */
+  const w=36; const c0=[px+n[0]*0, py-0]; /* вершины бруска */ const pts=[[px,py],[px+u[0]*w,py+u[1]*w],[px+u[0]*w-n[0]*w*-1+0,py+u[1]*w-n[1]*w*-1],[px+0+n[0]*w*0,py]];
+  const o=[-Math.sin(rad(a)),-Math.cos(rad(a))]; const q=[[px,py],[px+u[0]*w,py+u[1]*w],[px+u[0]*w+o[0]*(-w)*-1,py+u[1]*w+o[1]*w*1],[px+o[0]*w,py+o[1]*w]];
+  b+=PG(q,{f:C.yf,c:C.wood,w:2.5}); const cx=(q[0][0]+q[2][0])/2, cy=(q[0][1]+q[2][1])/2;
+  b+=arrow(cx,cy,cx,cy+60,{c:C.red,w:3})+T(cx+14,cy+62,sp.fl||"Fт",{c:C.red,s:14,w:800,a:"start"});
+  if(sp.normal!==false){ b+=arrow(cx,cy,cx+o[0]*55,cy+o[1]*55,{c:C.blue,w:3})+T(cx+o[0]*55-10,cy+o[1]*55-6,sp.nl||"N",{c:C.blue,s:14,w:800}); }
+  if(sp.fr){ b+=arrow(cx,cy,cx+u[0]*55,cy+u[1]*55,{c:C.grn,w:3})+T(cx+u[0]*55+4,cy+u[1]*55-8,sp.fr,{c:C.grn,s:14,w:800,a:"start"}); }
+  b+=arc(bx,by,40,0,rad(-a),{c:C.ink,w:2})+T(bx+60,by-8,sp.al||(a+"°"),{s:14,w:800}); return wrap(W,H,b,340); }
+function figForces(sp){ const W=320,H=170,cx=160,cy=70,s=sp.scale||5; let b=L(30,cy+30,290,cy+30,{c:C.grey,w:2})+R(cx-34,cy-24,68,54,{f:C.yf,c:C.wood,w:2.5,rx:4})+T(cx,cy+6,sp.body||"",{s:14,w:800});
+  (sp.f||[]).forEach(f=>{ const len=Math.max(40,f.v*s); const dir=f.dir; const x0=dir>0?cx+34:cx-34; b+=arrow(x0,cy+2+(f.dy||0),x0+dir*len,cy+2+(f.dy||0),{c:f.c||C.blue,w:3.2}); if(f.dy) b+=T(x0+dir*len+(dir>0?8:-8),cy+7+f.dy,f.l,{c:f.c||C.blue,s:14,w:800,a:dir>0?"start":"end"}); else b+=T(x0+dir*len/2,cy-34,f.l,{c:f.c||C.blue,s:14,w:800,a:"middle"}); });
+  if(sp.axis) b+=T(300,cy+50,sp.axis,{a:"end",s:13,c:C.grey}); return wrap(W,H,b,340); }
+function figVessel(sp){ /* сосуд с жидкостью: глубина h */ const W=340,H=230,x0=70,x1=230,top=30,bot=190; let b=PATH("M"+x0+" "+top+" L"+x0+" "+bot+" L"+x1+" "+bot+" L"+x1+" "+top,{w:3});
+  const ly=sp.level?bot-(bot-top)*sp.level:top+40; b+=R(x0+1.5,ly,x1-x0-3,bot-ly-1.5,{f:C.blue+"55",c:"none",w:0})+L(x0+2,ly,x1-2,ly,{c:C.blue,w:2.5});
+  const py=sp.pt?bot-(bot-top)*sp.pt:bot-30; if(sp.point){ b+=CI(160,py,4.5,{f:C.red,c:C.red}); b+=T(172,py+4,sp.point,{a:"start",s:14,w:800,c:C.red}); b+=L(255,ly,255,py,{c:C.red,w:1.8})+L(250,ly,260,ly,{c:C.red,w:1.8})+L(250,py,260,py,{c:C.red,w:1.8}); b+=T(262,(ly+py)/2+5,sp.h,{a:"start",s:15,w:800,c:C.red}); }
+  if(sp.liq) b+=T(160,(ly+bot)/2+(sp.point?-30:0),sp.liq,{s:14,c:C.blue,w:800}); return wrap(W,H,b,340); }
+function figUtube(sp){ /* сообщающиеся сосуды. yL — уровень слева; в правом колене: yR — верх столба, yS — граница воды и масла (если oil) */ const W=390,H=240,bot=206; let b="";
+  const lx0=70,lx1=124,rx0=196,rx1=250,cy0=176; const water=C.blue+"55";
+  b+=R(lx0,sp.yL,lx1-lx0,bot-sp.yL,{f:water,c:"none",w:0})+R(lx1,cy0,rx0-lx1,bot-cy0,{f:water,c:"none",w:0});
+  if(sp.oil){ b+=R(rx0,sp.yR,rx1-rx0,sp.yS-sp.yR,{f:C.yf,c:"none",w:0})+R(rx0,sp.yS,rx1-rx0,bot-sp.yS,{f:water,c:"none",w:0})+L(rx0,sp.yS,rx1,sp.yS,{c:C.ink,w:1.6,d:"3 3"}); }
+  else b+=R(rx0,sp.yR,rx1-rx0,bot-sp.yR,{f:water,c:"none",w:0});
+  b+=PATH("M"+lx0+" 16 L"+lx0+" "+bot+" L"+rx1+" "+bot+" L"+rx1+" 16",{w:3})+PATH("M"+lx1+" 16 L"+lx1+" "+cy0+" L"+rx0+" "+cy0+" L"+rx0+" 16",{w:3});
+  b+=L(lx0,sp.yL,lx1,sp.yL,{c:C.blue,w:2.5})+L(rx0,sp.yR,rx1,sp.yR,{c:sp.oil?C.gold:C.blue,w:2.5});
+  (sp.marks||[]).forEach(m=>{ b+=L(m.x1,m.y,m.x2,m.y,{c:C.red,w:1.5,d:"4 3"}); });
+  (sp.dims||[]).forEach(d=>{ b+=L(d.x,d.y1,d.x,d.y2,{c:C.red,w:1.8})+L(d.x-4,d.y1,d.x+4,d.y1,{c:C.red,w:1.8})+L(d.x-4,d.y2,d.x+4,d.y2,{c:C.red,w:1.8})+T(d.x+(d.dx===undefined?8:d.dx),(d.y1+d.y2)/2+5,d.l,{a:d.a||"start",c:d.c||C.red,s:14,w:800}); });
+  (sp.tx||[]).forEach(t=>{ b+=T(t.x,t.y,t.s,{s:13,c:t.c||C.ink,w:800}); }); return wrap(W,H,'<g transform="translate(34,0)">'+b+'</g>',390); }
+function figSpring(sp){ const W=300,H=250,x=110; let b=L(40,24,180,24,{w:5})+L(60,24,52,14,{w:2})+L(100,24,92,14,{w:2})+L(140,24,132,14,{w:2});
+  const y0=24,len=sp.len; const y1=y0+len; let d="M"+x+" "+y0; const turns=10; for(let i=0;i<turns;i++){ const ya=y0+len*i/turns, yb=y0+len*(i+1)/turns; d+=" L"+(x+(i%2?-14:14))+" "+r1((ya+yb)/2); } d+=" L"+x+" "+y1; b+=PATH(d,{c:C.ink,w:2.5});
+  b+=R(x-24,y1,48,40,{f:C.yf,c:C.wood,w:2.5,rx:4})+T(x,y1+26,sp.mass||"m",{s:14,w:800});
+  if(sp.dim){ b+=L(190,y0,190,y1,{c:C.red,w:1.8})+L(184,y0,196,y0,{c:C.red,w:1.8})+L(184,y1,196,y1,{c:C.red,w:1.8})+T(200,(y0+y1)/2+5,sp.dim,{a:"start",c:C.red,s:15,w:800}); }
+  return wrap(W,H,b,300); }
+function figFloat(sp){ const W=300,H=240; let b=R(50,50,200,170,{f:C.blue+"33",c:C.ink,w:2.5}); b+=L(50,50,250,50,{c:C.blue,w:2.5}); const cy=sp.cy||135; b+=R(120,cy-28,60,56,{f:C.yf,c:C.wood,w:2.5,rx:4}); const k=sp.k||2.4;
+  if(sp.fa!==undefined){ const la=sp.fa*k; b+=arrow(140,cy-28,140,cy-28-la,{c:C.blue,w:3.5})+T(124,cy-28-la-6,sp.fal||("Fₐ = "+sp.fa+" Н"),{c:C.blue,s:14,w:800,a:"end"}); }
+  if(sp.ft!==undefined){ const lt=sp.ft*k; b+=arrow(160,cy+28,160,cy+28+lt,{c:C.red,w:3.5})+T(176,cy+28+lt+4,sp.ftl||("Fт = "+sp.ft+" Н"),{c:C.red,s:14,w:800,a:"start"}); }
+  return wrap(W,H,b,300); }
+
+/* ---------- 3 класс ---------- */
+function figRect(sp){ const W=320,H=sp.h||190; let b=""; if(sp.shape==="L"){ /* Г-образная: a(ширина) b(высота), вырез c×d */ const k=sp.k||18; const a=sp.a*k,bb=sp.b*k,c=sp.c*k,d=sp.d*k; const x0=(W-a)/2,y0=(H-bb)/2; b+=PG([[x0,y0],[x0+a,y0],[x0+a,y0+bb-d],[x0+a-c,y0+bb-d],[x0+a-c,y0+bb],[x0,y0+bb]],{f:C.bf,c:C.blue,w:2.5});
+    const lab=sp.lab||{}; b+=T(x0+(a-c)/2,y0-6,lab.a||"",{s:14,w:800})+T(x0-8,y0+bb/2,lab.b||"",{a:"end",s:14,w:800})+T(x0+a-c/2,y0+bb-d+(sp.cl?16:-6),lab.c||"",{s:14,w:800,c:C.red})+T(x0+a-c-8,y0+bb-d/2+5,lab.d||"",{a:"end",s:14,w:800,c:C.red}); return wrap(W,H,b,340); }
+  const k=sp.k||Math.min(200/sp.a,110/sp.b); const w=sp.a*k,h=sp.b*k,x0=(W-w)/2,y0=(H-h)/2+4; b+=R(x0,y0,w,h,{f:C.bf,c:C.blue,w:3});
+  if(sp.grid){ for(let i=1;i<sp.a;i++) b+=L(x0+i*k,y0,x0+i*k,y0+h,{c:C.blue+"88",w:1}); for(let j=1;j<sp.b;j++) b+=L(x0,y0+j*k,x0+w,y0+j*k,{c:C.blue+"88",w:1}); }
+  if(sp.right) b+=P([[x0+12,y0],[x0+12,y0+12],[x0,y0+12]],{w:1.8});
+  b+=T(x0+w/2,y0-8,sp.la||"",{s:15,w:800,c:sp.la==="?"?C.red:C.ink})+T(x0-8,y0+h/2+5,sp.lb||"",{a:"end",s:15,w:800,c:sp.lb==="?"?C.red:C.ink});
+  if(sp.sq){ b=b; } if(sp.mid) b+=T(x0+w/2,y0+h/2+5,sp.mid,{s:16,w:800,c:C.blue});
+  return wrap(W,H,b,340); }
+function figBox(sp){ const W=320,H=210; const k=Math.min(sp.k||18,(H-64)/(sp.c+0.33*sp.b),(W-60)/(sp.a+0.54*sp.b)); const a=sp.a*k,bb=sp.b*k*0.6,c=sp.c*k; const dx=bb*0.9,dy=bb*0.55; /* изометрия: a — ширина, c — высота, b — глубина */ const ox=(W-(a+dx))/2, oy=H/2+(c+dy)/2-6;
+  const F=[[ox,oy],[ox+a,oy],[ox+a,oy-c],[ox,oy-c]]; const Tp=[[ox,oy-c],[ox+a,oy-c],[ox+a+dx,oy-c-dy],[ox+dx,oy-c-dy]]; const S=[[ox+a,oy],[ox+a+dx,oy-dy],[ox+a+dx,oy-c-dy],[ox+a,oy-c]];
+  let b=PG(F,{f:C.bf,c:C.ink,w:2.5})+PG(Tp,{f:"#eff6ff",c:C.ink,w:2.5})+PG(S,{f:"#bfdbfe",c:C.ink,w:2.5});
+  const l=sp.lab||{}; b+=T(ox+a/2,oy+18,l.a||"",{s:15,w:800})+T(ox+a+dx/2+14,oy-dy/2+14,l.b||"",{s:15,w:800,a:"start"})+T(ox-8,oy-c/2+5,l.c||"",{a:"end",s:15,w:800}); return wrap(W,H,b,340); }
+function figClock(sp){ const W=220,H=220,cx=110,cy=110,r=92; let b=CI(cx,cy,r,{f:"#fff",c:C.ink,w:4}); for(let i=0;i<60;i++){ const a=i*6; const p1=pol(cx,cy,r-(i%5?5:12),90-a),p2=pol(cx,cy,r-2,90-a); b+=L(p1[0],p1[1],p2[0],p2[1],{w:i%5?1.2:2.5}); }
+  for(let h=1;h<=12;h++){ const p=pol(cx,cy,r-26,90-h*30); b+=T(p[0],p[1]+6,String(h),{s:17,w:800}); }
+  const hh=(sp.h%12)+sp.m/60, ma=90-sp.m*6, ha=90-hh*30; const ph=pol(cx,cy,48,ha), pm=pol(cx,cy,72,ma); b+=L(cx,cy,ph[0],ph[1],{w:6,c:C.ink})+L(cx,cy,pm[0],pm[1],{w:3.5,c:C.red})+CI(cx,cy,5,{f:C.ink}); return wrap(W,H,b,220); }
+function figVenn(sp){ const W=320,H=190; let b=CI(120,95,70,{f:C.bf+"88",c:C.blue,w:2.5})+CI(200,95,70,{f:C.gf+"88",c:C.grn,w:2.5}); b+=T(88,28,sp.na||"A",{s:17,w:800,c:C.blue})+T(232,28,sp.nb||"B",{s:17,w:800,c:C.grn});
+  const put=(arr,cx,cy)=>{ arr.forEach((s,i)=>{ b+=T(cx,cy+(i-(arr.length-1)/2)*18+5,String(s),{s:15}); }); }; put(sp.a||[],86,95); put(sp.ab||[],160,95); put(sp.b||[],234,95); if(sp.out) b+=T(20,176,sp.out,{a:"start",s:13,c:C.grey}); return wrap(W,H,b,340); }
+function figGrid(sp){ /* закрашенные клетки */ const W=320,H=sp.h||200; const k=sp.k||24; const w=sp.cols*k,h=sp.rows*k; const x0=(W-w)/2,y0=(H-h)/2; let b=""; (sp.cells||[]).forEach(c=>{ b+=R(x0+c[0]*k,y0+c[1]*k,k,k,{f:C.bf,c:"none",w:0}); });
+  for(let i=0;i<=sp.cols;i++) b+=L(x0+i*k,y0,x0+i*k,y0+h,{c:C.blue+"99",w:1}); for(let j=0;j<=sp.rows;j++) b+=L(x0,y0+j*k,x0+w,y0+j*k,{c:C.blue+"99",w:1}); b+=R(x0,y0,w,h,{c:C.blue,w:2}); if(sp.note) b+=T(W/2,H-4,sp.note,{s:12,c:C.grey}); return wrap(W,H,b,340); }
+function figNum(sp){ const W=320,H=90; const sx=v=>20+(v-sp.min)/(sp.max-sp.min)*280; let b=arrow(14,50,308,50,{h:9,w:2.5}); for(let v=sp.min; v<=sp.max+1e-9; v=Math.round((v+sp.step)*1e6)/1e6){ b+=L(sx(v),44,sx(v),56,{w:2})+(sp.labels===undefined||sp.labels.includes(v)?T(sx(v),76,nf(v),{s:14,w:700}):""); }
+  (sp.pts||[]).forEach(p=>{ b+=CI(sx(p[0]),50,6,{f:p[2]||C.red,c:"#fff",w:1.5})+T(sx(p[0]),34,p[1],{s:15,w:800,c:p[2]||C.red}); }); return wrap(W,H,b,340); }
+function figCoins(sp){ const W=320,H=84; let b=""; const n=sp.items.length; const w=Math.min(96,(W-10)/n-6); sp.items.forEach((s,i)=>{ const x=5+i*(w+6); b+=R(x,16,w,52,{f:C.gf,c:C.grn,w:2.5,rx:6})+T(x+w/2,48,String(s),{s:17,w:800,c:"#166534"}); }); return wrap(W,H,b,340); }
+
+/* ---------- химия, биология ---------- */
+const ELEM=["","H","He","Li","Be","B","C","N","O","F","Ne","Na","Mg","Al","Si","P","S","Cl","Ar","K","Ca"];
+function shells(z){ const cap=[2,8,8,2]; const out=[]; let r=z; for(const c of cap){ if(r<=0) break; const t=Math.min(c,r); out.push(t); r-=t; } return out; }
+function figAtom(sp){ const W=300,H=240,cx=150,cy=120; const sh=sp.shells||shells(sp.z); let b=""; const rs=[38,66,94]; sh.forEach((n,i)=>{ b+=CI(cx,cy,rs[i],{c:C.grey,w:1.8}); for(let k=0;k<n;k++){ const a=-90+k*360/n+(i*20); const p=pol(cx,cy,rs[i],-a); b+=CI(p[0],p[1],6,{f:C.blue,c:"#fff",w:1.5}); } });
+  b+=CI(cx,cy,sp.hideNuc?14:17,{f:C.red,c:C.red}); if(!sp.hideNuc) b+=T(cx,cy+5,sp.nuc||("+"+sp.z),{s:13,c:"#fff",w:800}); if(sp.title) b+=T(cx,18,sp.title,{s:15,w:800}); return wrap(W,H,b,300); }
+function figPie(sp){ const W=320,H=210,cx=84,cy=105,r=70; let a0=-90,b=""; const cols=[C.blue,C.red,C.grn,C.gold,C.grey,"#7c3aed"]; const tot=sp.parts.reduce((s,p)=>s+p[1],0);
+  sp.parts.forEach((p,i)=>{ const a1=a0+p[1]/tot*360; const x1=cx+r*Math.cos(rad(a0)),y1=cy+r*Math.sin(rad(a0)),x2=cx+r*Math.cos(rad(a1)),y2=cy+r*Math.sin(rad(a1)); b+=PATH("M"+cx+" "+cy+" L"+r1(x1)+" "+r1(y1)+" A"+r+" "+r+" 0 "+(a1-a0>180?1:0)+" 1 "+r1(x2)+" "+r1(y2)+" Z",{f:cols[i%6],c:"#fff",w:2}); a0=a1; });
+  sp.parts.forEach((p,i)=>{ b+=R(164,40+i*28,13,13,{f:cols[i%6],c:"none",w:0})+T(183,51+i*28,p[0]+(sp.showVal===false?"":" — "+p[2]),{a:"start",s:12.5,w:700}); }); return wrap(W,H,b,340); }
+function figBoxes(sp){ /* схема: блоки и стрелки по цепочке. nodes:[текст], dir h|v */ const n=sp.nodes.length; const W=320; const bh=(sp.nodes.length>4?36:44),gap=(sp.nodes.length>4?20:30); const vert=sp.dir==="v"; const H=vert?n*bh+(n-1)*gap+16:(sp.h||120); let b="";
+  if(vert){ sp.nodes.forEach((t,i)=>{ const y=8+i*(bh+gap); const hot=t==="?"; b+=R(60,y,200,bh,{f:hot?C.rf:(sp.fills&&sp.fills[i])||C.bf,c:hot?C.red:C.blue,w:2.5,rx:10})+T(160,y+bh/2+5,t,{s:String(t).length>17?13:15,w:800,c:hot?C.red:C.ink}); if(i<n-1) b+=arrow(160,y+bh,160,y+bh+gap-3,{c:C.ink,w:2.5}); }); }
+  else { const w=Math.min(92,(W-12-(n-1)*16)/n); const tot=n*w+(n-1)*16; const x0=(W-tot)/2; sp.nodes.forEach((t,i)=>{ const x=x0+i*(w+16); const hot=t==="?"; b+=R(x,H/2-26,w,52,{f:hot?C.rf:(sp.fills&&sp.fills[i])||C.bf,c:hot?C.red:C.blue,w:2.5,rx:10}); const parts=String(t).split("\n"); parts.forEach((ln,k)=>{ b+=T(x+w/2,H/2+5+(k-(parts.length-1)/2)*15,ln,{s:ln.length>7?11:(ln.length>5?12.5:14),w:800,c:hot?C.red:C.ink}); }); if(i<n-1) b+=arrow(x+w+1,H/2,x+w+15,H/2,{h:7,c:C.ink,w:2.5}); }); }
+  return wrap(W,H,b,340); }
+function figProc(sp){ /* вход → процесс → выход */ const W=320,H=190; let b=""; const ins=sp.in,outs=sp.out; b+=R(110,50,100,90,{f:C.gf,c:C.grn,w:3,rx:14})+T(160,100,sp.mid,{s:15,w:800,c:"#166534"});
+  ins.forEach((t,i)=>{ const y=70+i*50-((ins.length-1)*25); const hot=t==="?"; b+=T(52,y+5,t,{s:14,w:800,c:hot?C.red:C.ink}); b+=arrow(88,y,108,95,{c:C.ink,w:2.2}); });
+  outs.forEach((t,i)=>{ const y=70+i*50-((outs.length-1)*25); const hot=t==="?"; b+=arrow(212,95,232,y,{c:C.ink,w:2.2}); b+=T(272,y+5,t,{s:14,w:800,c:hot?C.red:C.ink}); });
+  if(sp.cond) b+=T(160,34,sp.cond,{s:13,c:C.gold,w:800}); return wrap(W,H,b,340); }
+function figCell(sp){ const W=320,H=240; const plant=sp.plant; let b=""; if(plant){ b+=R(20,20,280,200,{f:"#bbf7d0",c:C.grn,w:5,rx:18})+R(30,30,260,180,{f:"#f0fdf4",c:"#4ade80",w:2,rx:14}); }
+  else b+=PATH("M40 120 Q40 30 160 28 Q290 30 292 120 Q290 215 160 214 Q40 212 40 120 Z",{f:"#fef9c3",c:C.gold,w:4});
+  /* органоиды: [номер,x,y] */ const org={nuc:()=>CI(160,118,34,{f:"#c4b5fd",c:"#6d28d9",w:2.5})+CI(168,112,9,{f:"#7c3aed",c:"none",w:0}),
+    vac:()=>PATH("M70 70 Q60 110 82 150 Q120 170 130 110 Q120 70 70 70 Z",{f:"#e0f2fe",c:C.blue,w:2}),
+    chl:(x,y)=>'<ellipse cx="'+x+'" cy="'+y+'" rx="16" ry="9" fill="#22c55e" stroke="#15803d" stroke-width="2"/>',
+    mit:(x,y)=>'<ellipse cx="'+x+'" cy="'+y+'" rx="15" ry="8" fill="#fb923c" stroke="#c2410c" stroke-width="2"/>'+PATH("M"+(x-9)+" "+y+" l4 -4 l4 8 l4 -8 l4 8",{c:"#c2410c",w:1.5}) };
+  const ps=sp.pos; /* позиции подписей */ b+=org.nuc(); if(plant) b+=org.vac()+org.chl(228,62)+org.chl(236,164)+org.chl(206,200)+org.mit(112,196); else b+=org.mit(90,80)+org.mit(230,170)+org.mit(100,170);
+  b+=CI(210,92,5,{f:"#475569",c:"none",w:0})+CI(220,104,5,{f:"#475569",c:"none",w:0})+CI(200,110,5,{f:"#475569",c:"none",w:0});
+  (sp.marks||[]).forEach(m=>{ b+=L(m[3],m[4],m[1],m[2],{c:C.red,w:1.8})+CI(m[1],m[2],3,{f:C.red,c:C.red})+'<circle cx="'+m[3]+'" cy="'+m[4]+'" r="11" fill="#fff" stroke="'+C.red+'" stroke-width="2"/>'+T(m[3],m[4]+5,String(m[0]),{s:14,w:800,c:C.red}); }); return wrap(W,H,b,340); }
+function figEmoji(sp){ const items=sp.items; const W=320; const n=items.length; const perRow=n>6?Math.ceil(n/2):n; const rows=Math.ceil(n/perRow); const sz=Math.min(n===1?76:66,Math.floor(290/perRow/1.15)); const rh=sz*1.35; const H=sp.h||Math.round(rows*rh+20); let b=""; items.forEach((e,i)=>{ const rw=Math.floor(i/perRow), cl=i%perRow; const inRow=Math.min(perRow,n-rw*perRow); b+='<text x="'+r1(W/(inRow+1)*(cl+1))+'" y="'+r1(14+rw*rh+sz)+'" font-size="'+sz+'" text-anchor="middle" font-family="Apple Color Emoji,Segoe UI Emoji,Noto Color Emoji,sans-serif">'+esc(e)+'</text>'; }); return wrap(W,H,b,340); }
+function figTimeline(sp){ const W=320,H=130,x0=20,x1=300; const mn=sp.min,mx=sp.max; const sx=v=>x0+(v-mn)/(mx-mn)*(x1-x0); let b=arrow(x0-6,70,x1+14,70,{h:9,w:3}); const st=sp.step||10; for(let v=Math.ceil(mn/st)*st; v<=mx+1e-9; v+=st){ b+=L(sx(v),64,sx(v),76,{w:1.8})+T(sx(v),88,String(v),{s:10.5,w:600,c:C.grey}); }
+  (sp.ev||[]).forEach((e,i)=>{ const up=i%2===0; const hot=e[1]==="?"; const col=hot?C.red:C.blue; b+=L(sx(e[0]),70,sx(e[0]),up?40:100,{c:col,w:1.8})+CI(sx(e[0]),70,5,{f:col,c:"#fff",w:1.5}); b+=T(sx(e[0]),up?32:114,e[1],{s:12,w:800,c:col}); });
+  if(sp.span) b+=R(sx(sp.span[0]),66,sx(sp.span[1])-sx(sp.span[0]),8,{f:C.red+"88",c:"none",w:0}); return wrap(W,H,b,340); }
+
+const TYPES={tri:figTri,cross:figCross,par:figPar,seg:figSeg,angle:figAngle,circ:figCirc,circ2:figCirc2,vscale:figVScale,ruler:figRuler,graph:figGraph,bars:figBars,lever:figLever,incline:figIncline,forces:figForces,vessel:figVessel,utube:figUtube,spring:figSpring,float:figFloat,rect:figRect,box:figBox,clock:figClock,venn:figVenn,grid:figGrid,num:figNum,coins:figCoins,atom:figAtom,pie:figPie,boxes:figBoxes,proc:figProc,cell:figCell,emoji:figEmoji,timeline:figTimeline};
+function html(sp){ if(!sp||!TYPES[sp.t]) return ""; try{ return TYPES[sp.t](sp); }catch(e){ return ""; } }
+G.FMX={ add(key,id,gens){ const c=G.FM&&G.FM.COURSES&&G.FM.COURSES[key]; if(!c) return; const u=c.units.find(x=>x.id===id); if(u) gens.forEach(g=>u.gens.push(g)); } };
+G.FMFig={html,types:Object.keys(TYPES),shells,ELEM,nf,triPts};
+})(typeof window!=="undefined"?window:globalThis);
+
+</script>
+<script>
 /* ===== Алгебра 7 — Шыныбеков А.Н., Шыныбеков Д.А. (Атамұра, 2017) ===== */
 (function(G){
 "use strict";
@@ -4826,6 +5078,397 @@ tamina:[
 
 </script>
 <script>
+/* ===== Геометрия 7: задания с рисунками (рисунок строится под числа задачи) ===== */
+(function(G){
+"use strict";
+const F=G.FM, X=G.FMX; if(!F.COURSES.geo7) return;
+const inp=o=>{ o.type="input"; return o; }, quiz=o=>{ o.type="quiz"; return o; };
+const num=v=>({kind:"num",ref:String(v)});
+const O=(r,good,wr)=>r.shuffle([{t:good,ok:true}].concat(wr.filter(w=>w!==good).slice(0,3).map(w=>({t:w,ok:false}))));
+
+/* 1.1 отрезки на прямой */
+X.add("geo7","1.1",[{f:(r)=>{ const ab=r.int(2,9), bc=r.int(2,9), ac=ab+bc; const askMid=r.chance(.5);
+  const mode=r.int(0,2); let lens,prompt,ans,sol;
+  if(mode===0){ lens=[[0,1,String(ab)],[1,2,String(bc)]]; prompt="Точка B лежит между A и C. AB = "+ab+" см, BC = "+bc+" см. Найдите AC (см)."; ans=ac; sol=["AC = AB + BC = "+ab+" + "+bc+" = "+ac+"."]; }
+  else if(mode===1){ lens=[[0,1,String(ab)],[1,2,"?"],[0,2,String(ac)]]; prompt="Точка B лежит между A и C. AB = "+ab+" см, AC = "+ac+" см. Найдите BC (см)."; ans=bc; sol=["BC = AC − AB = "+ac+" − "+ab+" = "+bc+"."]; }
+  else { lens=[[0,1,String(ab)],[1,2,String(bc)]]; prompt="Точка B лежит между A и C. AB = "+ab+" см, BC = "+bc+" см. Найдите AC (см)."; ans=ac; sol=["AC = AB + BC = "+ac+"."]; }
+  lens=lens.map(l=>[l[0],l[1],l[2],l[2]==="?"?"?":""]);
+  if(mode===1) lens[2]=[0,2,String(ac)]; 
+  const fig={t:"seg",pts:[["A",0],["B",ab],["C",ac]],lens:lens.filter((l,i)=>mode!==1||i!==2).concat(mode===1?[]:[])};
+  if(mode===1){ fig.lens=[[0,1,String(ab)],[1,2,"?","?"]]; }
+  return inp({topic:"Отрезки (рисунок)",fig,prompt,check:num(ans),answer:String(ans),hints:["Длина всего отрезка равна сумме его частей."],solution:sol}); }}]);
+
+/* 1.2 углы и биссектриса */
+X.add("geo7","1.2",[{f:(r)=>{ const half=r.int(10,80); const th=2*half; const mode=r.int(0,1);
+  if(mode===0) return inp({topic:"Биссектриса угла",fig:{t:"angle",th:th>150?150:th,lab:th+"°",bis:true,n:["A","B"],o:"O"},prompt:"Луч, показанный красной линией, — биссектриса угла AOB = "+th+"°. Найдите угол между биссектрисой и стороной OA (в градусах).",check:num(half),answer:String(half),hints:["Биссектриса делит угол пополам."],solution:[th+"° : 2 = "+half+"°.","Ответ: "+half+"°."]});
+  return inp({topic:"Измерение угла",fig:{t:"angle",th:half*2>150?150:half*2,lab:"?",n:["A","B"],o:"O"},prompt:"Угол AOB в два раза больше угла, равного "+half+"°. Найдите угол AOB (в градусах).",check:num(th),answer:String(th),hints:["«В два раза больше» — умножаем на 2."],solution:[half+"° · 2 = "+th+"°.","Ответ: "+th+"°."]}); }}]);
+
+/* 1.3 / 3.2 сумма углов треугольника */
+X.add("geo7","1.3",[{f:(r)=>{ const a=r.int(25,80), b=r.int(25,100-0); if(a+b>150) return null; const c=180-a-b; const hide=r.pick(["A","B","C"]); const v={A:a,B:b,C:c};
+  const ang={}; ["A","B","C"].forEach(k=>ang[k]=(k===hide)?"?":v[k]+"°");
+  return inp({topic:"Сумма углов треугольника",fig:{t:"tri",angA:a,angB:b,ang},prompt:"Найдите неизвестный угол треугольника (в градусах).",check:num(v[hide]),answer:String(v[hide]),hints:["Сумма углов треугольника равна 180°."],solution:["Сумма углов треугольника 180°.","Угол "+hide+" = 180° − "+["A","B","C"].filter(k=>k!==hide).map(k=>v[k]+"°").join(" − ")+" = "+v[hide]+"°.","Ответ: "+v[hide]+"°."]}); }}]);
+X.add("geo7","3.2",[
+ {f:(r)=>{ const a=r.int(35,70), b=r.int(35,70); const ext=a+b; return inp({topic:"Внешний угол",fig:{t:"tri",angA:a,angB:b,ext:"C",extLabel:"?",ang:{A:a+"°",B:b+"°"}},prompt:"В треугольнике ABC углы A и B равны "+a+"° и "+b+"°. Найдите внешний угол при вершине C (отмечен красным), в градусах.",check:num(ext),answer:String(ext),hints:["Внешний угол равен сумме двух внутренних углов, не смежных с ним."],solution:["Внешний угол при C = ∠A + ∠B = "+a+"° + "+b+"° = "+ext+"°.","Ответ: "+ext+"°."]}); }},
+ {f:(r)=>{ const a=r.int(35,70), b=r.int(35,70); const ext=a+b; return inp({topic:"Внешний угол",fig:{t:"tri",angA:a,angB:b,ext:"C",extLabel:ext+"°",ang:{A:a+"°",B:"?"}},prompt:"Внешний угол при вершине C равен "+ext+"°, угол A равен "+a+"°. Найдите угол B (в градусах).",check:num(b),answer:String(b),hints:["Внешний угол = сумма двух внутренних, не смежных с ним."],solution:["∠B = внешний − ∠A = "+ext+"° − "+a+"° = "+b+"°.","Ответ: "+b+"°."]}); }}]);
+
+/* 2.2 равнобедренный треугольник */
+X.add("geo7","2.2",[
+ {f:(r)=>{ const base=r.int(35,80); const apex=180-2*base; return inp({topic:"Равнобедренный треугольник",fig:{t:"tri",angA:base,angB:base,eq:[["AC","BC"]],ang:{A:"?",C:apex+"°"}},prompt:"В равнобедренном треугольнике ABC (AC = BC) угол при вершине C равен "+apex+"°. Найдите угол при основании A (в градусах).",check:num(base),answer:String(base),hints:["Углы при основании равнобедренного треугольника равны.","Сумма углов 180°."],solution:["∠A = ∠B (углы при основании).","∠A = (180° − "+apex+"°) : 2 = "+base+"°.","Ответ: "+base+"°."]}); }},
+ {f:(r)=>{ const base=r.int(35,80); const apex=180-2*base; return inp({topic:"Равнобедренный треугольник",fig:{t:"tri",angA:base,angB:base,eq:[["AC","BC"]],ang:{A:base+"°",C:"?"}},prompt:"В равнобедренном треугольнике ABC (AC = BC) угол при основании A равен "+base+"°. Найдите угол при вершине C (в градусах).",check:num(apex),answer:String(apex),hints:["∠B = ∠A.","Сумма углов 180°."],solution:["∠B = ∠A = "+base+"°.","∠C = 180° − "+base+"° − "+base+"° = "+apex+"°.","Ответ: "+apex+"°."]}); }},
+ {f:(r)=>{ const leg=r.int(4,15), bs=r.int(2,2*leg-2); const P=2*leg+bs; return inp({topic:"Периметр равнобедренного",fig:{t:"tri",sides:[leg,leg,bs],eq:[["AC","BC"]],sides_l:{AC:leg+" см",BC:leg+" см",AB:bs+" см"}},prompt:"Найдите периметр равнобедренного треугольника (в см).",check:num(P),answer:String(P),hints:["Периметр — сумма длин всех сторон.","Боковые стороны равны."],solution:["P = "+leg+" + "+leg+" + "+bs+" = "+P+".","Ответ: "+P+" см."]}); }},
+ {f:(r)=>{ const half=r.int(20,45); return inp({topic:"Биссектриса треугольника",fig:{t:"tri",angA:2*half>150?100:2*half,angB:55,lines:[{kind:"bis",from:"A",name:"D"}]},prompt:"В треугольнике ABC проведена биссектриса AD. Угол A равен "+(2*half>150?100:2*half)+"°. Найдите угол BAD (в градусах).",check:num((2*half>150?100:2*half)/2),answer:String((2*half>150?100:2*half)/2),hints:["Биссектриса делит угол пополам."],solution:["∠BAD = ∠A : 2 = "+(2*half>150?100:2*half)+"° : 2 = "+((2*half>150?100:2*half)/2)+"°.","Ответ: "+((2*half>150?100:2*half)/2)+"°."]}); }},
+ {f:(r)=>{ const m=r.int(3,12); return inp({topic:"Медиана",fig:{t:"tri",angA:60,angB:50,lines:[{kind:"med",from:"C",name:"M"}],sides_l:{AB:(2*m)+" см"}},prompt:"CM — медиана треугольника ABC, AB = "+(2*m)+" см. Найдите AM (в см).",check:num(m),answer:String(m),hints:["Медиана соединяет вершину с серединой противоположной стороны."],solution:["M — середина AB, значит AM = AB : 2 = "+(2*m)+" : 2 = "+m+".","Ответ: "+m+" см."]}); }}]);
+
+/* 1.4 вертикальные и смежные углы */
+X.add("geo7","1.4",[
+ {f:(r)=>{ const th=r.int(25,80)+(r.chance(.5)?0:0); const mode=r.int(0,2); const adj=180-th;
+   if(mode===0) return inp({topic:"Вертикальные углы",fig:{t:"cross",th,lab:[th+"°","","","x"]},prompt:"Две прямые пересеклись. Один из углов равен "+th+"°. Найдите вертикальный ему угол x (в градусах).",check:num(th),answer:String(th),hints:["Вертикальные углы равны."],solution:["x и угол "+th+"° — вертикальные, значит x = "+th+"°.","Ответ: "+th+"°."]});
+   if(mode===1) return inp({topic:"Смежные углы",fig:{t:"cross",th,lab:[th+"°","x","",""]},prompt:"Две прямые пересеклись. Один из углов равен "+th+"°. Найдите смежный с ним угол x (в градусах).",check:num(adj),answer:String(adj),hints:["Сумма смежных углов равна 180°."],solution:["x = 180° − "+th+"° = "+adj+"°.","Ответ: "+adj+"°."]});
+   return inp({topic:"Углы при пересечении",fig:{t:"cross",th,lab:[th+"°","","x",""]},prompt:"Две прямые пересеклись. Один из углов равен "+th+"°. Найдите угол x, отмеченный красным (в градусах).",check:num(th),answer:String(th),hints:["Угол x — вертикальный углу "+th+"°? Проверь, какие углы лежат друг напротив друга."],solution:["Отмеченные углы — вертикальные: x = "+th+"°.","Ответ: "+th+"°."]}); }}]);
+
+/* 3.1 параллельные прямые и секущая */
+X.add("geo7","3.1",[{f:(r)=>{ const th=r.pick([40,45,50,55,60,65,70,75,110,115,120,125,130,135]); const al=th, be=180-th; const acute=th<90?th:180-th; // углы: S0,S2 = th ; S1,S3 = 180-th
+  const T=[
+   {n:"соответственные",g:[0,4],t:[0,4],eq:true,rel:"Соответственные углы при параллельных прямых равны."},
+   {n:"накрест лежащие",g:[3,5],eq:true,rel:"Накрест лежащие углы при параллельных прямых равны."},
+   {n:"накрест лежащие",g:[2,4],eq:true,rel:"Накрест лежащие углы при параллельных прямых равны."},
+   {n:"односторонние",g:[3,4],eq:false,rel:"Сумма односторонних углов при параллельных прямых равна 180°."},
+   {n:"односторонние",g:[2,5],eq:false,rel:"Сумма односторонних углов при параллельных прямых равна 180°."},
+   {n:"вертикальные",g:[1,3],eq:true,rel:"Вертикальные углы равны."},
+   {n:"смежные",g:[0,1],eq:false,rel:"Сумма смежных углов равна 180°."} ];
+  const tp=r.pick(T); const val=i=>{ const s=i%4; return (s%2===0)?th:180-th; };
+  let gi=tp.g[0], ti=tp.g[1]; if(r.chance(.5)){ const z=gi; gi=ti; ti=z; }
+  const lab=["","","","","","","",""]; lab[gi]=val(gi)+"°"; lab[ti]="?"; const ans=val(ti);
+  return inp({topic:"Параллельные прямые и секущая",fig:{t:"par",th:acute===th?th:180-th>90?th:th,lab,a:"a",b:"b"},prompt:"Прямые a и b параллельны. Найдите угол, отмеченный «?» (в градусах). Подсказка: эти два угла — "+tp.n+".",check:num(ans),answer:String(ans),hints:["Определи, какая пара углов: "+tp.n+".",tp.rel],solution:[tp.rel,"Угол «?» = "+(tp.eq?val(gi)+"°":"180° − "+val(gi)+"° = "+ans+"°")+".","Ответ: "+ans+"°."]}); }}]);
+
+/* 3.3 прямоугольный треугольник */
+X.add("geo7","3.3",[
+ {f:(r)=>{ const a=r.int(25,65); const c=90-a; return inp({topic:"Острые углы прямоугольного",fig:{t:"tri",angA:a,angB:90,right:"B",ang:{A:a+"°",C:"?"}},prompt:"В прямоугольном треугольнике ABC угол B прямой, угол A равен "+a+"°. Найдите угол C (в градусах).",check:num(c),answer:String(c),hints:["Сумма острых углов прямоугольного треугольника равна 90°."],solution:["∠C = 90° − "+a+"° = "+c+"°.","Ответ: "+c+"°."]}); }},
+ {f:(r)=>{ const hyp=2*r.int(3,15); const leg=hyp/2; return inp({topic:"Катет против угла 30°",fig:{t:"tri",angA:30,angB:90,right:"B",ang:{A:"30°"},sides_l:{AC:hyp+" см",BC:"?"}},prompt:"В прямоугольном треугольнике ABC угол B прямой, угол A равен 30°, гипотенуза AC = "+hyp+" см. Найдите катет BC, лежащий против угла 30° (в см).",check:num(leg),answer:String(leg),hints:["Катет, лежащий против угла 30°, равен половине гипотенузы."],solution:["BC = AC : 2 = "+hyp+" : 2 = "+leg+" см.","Ответ: "+leg+" см."]}); }}]);
+
+/* 3.4 неравенства в треугольнике */
+X.add("geo7","3.4",[{f:(r)=>{ let a,b,c; do{ a=r.int(4,12); b=r.int(4,12); c=r.int(4,12); }while(a===b||b===c||a===c||a+b<=c||a+c<=b||b+c<=a);
+  const m=Math.max(a,b,c); const opp={}; /* сторона a = BC (напротив A), b = CA (напротив B), c = AB (напротив C) */ const vertex=m===a?"A":m===b?"B":"C";
+  return quiz({topic:"Наибольший угол",fig:{t:"tri",sides:[a,b,c],sides_l:{BC:String(a),AC:String(b),AB:String(c)}},prompt:"Стороны треугольника ABC: BC = "+a+", AC = "+b+", AB = "+c+". Какой угол треугольника наибольший?",options:O(r,"угол "+vertex,["угол A","угол B","угол C"].filter(x=>x!=="угол "+vertex)),hints:["Против большей стороны лежит больший угол."],solution:["Наибольшая сторона — "+m+", она лежит против угла "+vertex+".","Ответ: угол "+vertex+"."]}); }}]);
+
+/* 4.1 окружность */
+X.add("geo7","4.1",[
+ {f:(r)=>{ const R=r.int(2,15); const mode=r.int(0,1); if(mode===0) return inp({topic:"Радиус и диаметр",fig:{t:"circ",show:[["r",35,"R = "+R+" см"],["d",160,"d = ?"]]},prompt:"Радиус окружности равен "+R+" см. Найдите диаметр (в см).",check:num(2*R),answer:String(2*R),hints:["Диаметр в два раза больше радиуса."],solution:["d = 2R = 2 · "+R+" = "+(2*R)+" см.","Ответ: "+(2*R)+" см."]});
+   return inp({topic:"Радиус и диаметр",fig:{t:"circ",show:[["d",160,"d = "+(2*R)+" см"],["r",35,"R = ?"]]},prompt:"Диаметр окружности равен "+(2*R)+" см. Найдите радиус (в см).",check:num(R),answer:String(R),hints:["Радиус — половина диаметра."],solution:["R = d : 2 = "+(2*R)+" : 2 = "+R+" см.","Ответ: "+R+" см."]}); }},
+ {f:(r)=>{ const a=r.int(35,70), b=r.int(35,70); const ins=r.chance(.5); const g=ins?"вписанная":"описанная"; return quiz({topic:"Вписанная и описанная окружности",fig:{t:"circ",tri:{angA:a,angB:b},mode:ins?"in":"out"},prompt:"Окружность на рисунке касается всех сторон треугольника или проходит через все его вершины? Как она называется относительно треугольника?",options:O(r,g,["вписанная","описанная"]),hints:["Вписанная — внутри треугольника, касается сторон. Описанная — проходит через вершины."],solution:[ins?"Окружность лежит внутри треугольника и касается всех сторон — вписанная.":"Окружность проходит через все три вершины — описанная.","Ответ: "+g+"."]}); }},
+ {f:(r)=>{ const r1=r.int(2,6), r2=r.int(2,6); const kind=r.int(0,4); let d,ans; const sc=1;
+   if(kind===0){ d=r1+r2; ans="касаются внешним образом"; } else if(kind===1){ if(r1===r2) return null; d=Math.abs(r1-r2); ans="касаются внутренним образом"; }
+   else if(kind===2){ d=r.int(Math.abs(r1-r2)+1,r1+r2-1); if(d<=Math.abs(r1-r2)||d>=r1+r2) return null; ans="пересекаются в двух точках"; }
+   else if(kind===3){ d=r1+r2+r.int(1,4); ans="не пересекаются (лежат одна вне другой)"; } else { if(r1===r2) return null; d=Math.abs(r1-r2)-1; if(d<0) return null; ans="не пересекаются (одна внутри другой)"; }
+   const k=Math.min(13,260/(r1+d+r2+0.001), 70/Math.max(r1,r2)); const all=["касаются внешним образом","касаются внутренним образом","пересекаются в двух точках","не пересекаются (лежат одна вне другой)","не пересекаются (одна внутри другой)"];
+   return quiz({topic:"Две окружности",fig:{t:"circ2",r1,r2,d,sc:k},prompt:"Радиусы окружностей R₁ = "+r1+" и R₂ = "+r2+", расстояние между центрами O₁O₂ = "+d+". Как расположены окружности?",options:O(r,ans,all.filter(x=>x!==ans)),hints:["Сравни d с суммой радиусов "+(r1+r2)+" и разностью радиусов "+Math.abs(r1-r2)+"."],solution:["R₁ + R₂ = "+(r1+r2)+", |R₁ − R₂| = "+Math.abs(r1-r2)+", d = "+d+".",d===r1+r2?"d = R₁ + R₂ — внешнее касание.":d===Math.abs(r1-r2)&&d>0?"d = |R₁ − R₂| — внутреннее касание.":d>r1+r2?"d > R₁ + R₂ — окружности не пересекаются, лежат одна вне другой.":d<Math.abs(r1-r2)?"d < |R₁ − R₂| — одна окружность внутри другой.":"|R₁ − R₂| < d < R₁ + R₂ — две точки пересечения.","Ответ: "+ans+"."]}); }}]);
+})(typeof window!=="undefined"?window:globalThis);
+
+</script>
+<script>
+/* ===== Физика 7: задания с рисунками ===== */
+(function(G){
+"use strict";
+const F=G.FM, X=G.FMX; if(!F.COURSES.phys7) return;
+const inp=o=>{ o.type="input"; return o; }, quiz=o=>{ o.type="quiz"; return o; };
+const num=v=>({kind:"num",ref:String(v)});
+const fx=x=>Number(x.toPrecision(12)); const D=v=>F.fmtNum(fx(v));
+const O=(r,good,wr)=>r.shuffle([{t:good,ok:true}].concat(wr.filter(w=>w!==good).slice(0,3).map(w=>({t:w,ok:false}))));
+
+/* ---- приборы: цена деления и показания (темы 2 и 4) ---- */
+function inst(r){ const kinds=["cyl","thermo","dyn","ruler"]; const kd=r.pick(kinds); let s,k,mn,mx,unit,name,val,kk;
+  if(kd==="cyl"){ [s,k]=r.pick([[1,10],[2,5],[5,4],[10,5],[2,10]]); const major=s*k; mn=0; mx=major*r.int(4,6); unit="мл"; name="мензурки"; }
+  else if(kd==="thermo"){ [s,k]=r.pick([[1,10],[2,5]]); mn=-20; mx=40; unit="°C"; name="термометра"; }
+  else if(kd==="dyn"){ [s,k]=r.pick([[0.1,10],[0.2,5],[0.5,2]]); mn=0; mx=5; unit="Н"; name="динамометра"; }
+  else { s=0.5; k=2; mn=0; mx=10; unit="см"; name="линейки"; }
+  const major=fx(s*k); const labels=[]; for(let v=mn; v<=mx+1e-9; v=fx(v+major)) labels.push(v);
+  return {kd,s,k,mn,mx,unit,name,major,labels}; }
+const instFig=(I,val)=>I.kd==="ruler"?{t:"ruler",min:I.mn,max:I.mx,step:I.s,labels:I.labels,obj:val,unit:I.unit}:{t:"vscale",kind:I.kd,min:I.mn,max:I.mx,step:I.s,labels:I.labels,val,unit:I.unit};
+X.add("phys7","4",[
+ {f:(r)=>{ const I=inst(r); const l1=I.labels[1], l2=I.labels[2]; const fig=instFig(I,I.kd==="ruler"?[1,6]:(I.mn+I.s*r.int(3,I.k*2)));
+   return inp({topic:"Цена деления",fig,prompt:"Определите цену деления шкалы "+I.name+" ("+I.unit+"). Подписаны штрихи "+D(l1)+" и "+D(l2)+" "+I.unit+".",check:num(fx(I.s)),answer:D(I.s),
+    hints:["Цена деления = (большее значение − меньшее) : число промежутков между ними.","Между подписанными штрихами "+I.k+" промежутков."],solution:["Между штрихами "+D(l1)+" и "+D(l2)+" — "+I.k+" промежутков.","Цена деления = ("+D(l2)+" − "+D(l1)+") : "+I.k+" = "+D(I.s)+" "+I.unit+".","Ответ: "+D(I.s)+" "+I.unit+"."]}); }},
+ {f:(r)=>{ const I=inst(r); if(I.kd==="ruler"){ const a=r.int(1,6)*0.5+0.5*r.int(0,2), len=r.int(3,12)*0.5; const b=fx(a+len); if(b>I.mx) return null; return inp({topic:"Измерение длины",fig:instFig(I,[a,b]),prompt:"Какова длина бруска? Шкала линейки в сантиметрах, цена деления "+D(I.s)+" см. Ответ в см.",check:num(fx(len)),answer:D(len),hints:["Из показания правого конца вычти показание левого конца."],solution:["Левый конец — "+D(a)+" см, правый — "+D(b)+" см.","Длина = "+D(b)+" − "+D(a)+" = "+D(len)+" см.","Ответ: "+D(len)+" см."]}); }
+   let n=r.int(3,I.k*3); let v=fx(I.mn+I.s*n); if(I.kd==="thermo") v=fx(-10+I.s*r.int(0,Math.floor(40/I.s))); if(I.kd==="thermo"&&v>35) v=35; if(v%1!==0&&I.kd==="thermo") return null; if(v>I.mx) return null;
+   if(I.labels.some(l=>Math.abs(l-v)<1e-9)) return null;
+   return inp({topic:"Показания прибора",fig:instFig(I,v),prompt:"Цена деления шкалы "+I.name+" — "+D(I.s)+" "+I.unit+". Какое значение показывает прибор? (ответ в "+I.unit+")",check:num(v),answer:D(v),hints:["Найди ближайший подписанный штрих и отсчитай деления от него.","Каждое деление — "+D(I.s)+" "+I.unit+"."],solution:["Отсчитываем от подписанного штриха, цена деления "+D(I.s)+" "+I.unit+".","Показание: "+D(v)+" "+I.unit+".","Ответ: "+D(v)+" "+I.unit+"."]}); }}
+]);
+
+/* ---- графики движения (тема 8) ---- */
+function gr(T,S,tx,ty,lines,dots){ return {t:"graph",xr:[0,T],yr:[0,S],xs:tx,ys:ty,tx:tx,ty:ty,xl:"t, с",yl:"s, м",lines,dots}; }
+X.add("phys7","8",[
+ {f:(r)=>{ const v=r.pick([2,3,4,5,6,8,10]), T=r.pick([4,6,8,10]); const S=v*T; const ys=S>40?10:(S>20?5:(S>10?2:1)); const Smax=Math.ceil(S/ys)*ys;
+   return inp({topic:"График: скорость",fig:gr(T,Smax,T>6?2:1,ys*(Smax/ys>8?2:1),[{pts:[[0,0],[T,S]]}],[{x:T,y:S,proj:true,l:"("+T+"; "+S+")"}]),prompt:"На графике — движение тела с постоянной скоростью. Найдите скорость (м/с).",check:num(v),answer:String(v),hints:["Скорость = путь : время."],solution:["За "+T+" с тело прошло "+S+" м.","v = "+S+" : "+T+" = "+v+" м/с.","Ответ: "+v+" м/с."]}); }},
+ {f:(r)=>{ const v=r.pick([2,3,4,5]), t1=r.int(2,4), rest=r.int(2,4), t2=t1+rest, v2=r.pick([2,3,4,6]), t3=r.int(2,4); const s1=v*t1, s3=s1+v2*t3, T=t2+t3; if(T>12||s3>40) return null;
+   const ys=s3>20?5:(s3>10?2:1); const Smax=Math.ceil(s3/ys)*ys; const ask=r.int(0,2);
+   const fig=gr(T,Smax,1,ys,[{pts:[[0,0],[t1,s1],[t2,s1],[T,s3]]}],ask===1?[{x:T,y:s3,proj:true}]:(ask===2?[{x:t2,y:s1,proj:true},{x:T,y:s3,proj:true}]:[{x:t1,y:s1,proj:true},{x:t2,y:s1,proj:true}]));
+   if(ask===0) return inp({topic:"График: остановка",fig,prompt:"Тело двигалось, остановилось и снова поехало. Сколько секунд оно стояло?",check:num(rest),answer:String(rest),hints:["Стоянка — горизонтальный участок графика: путь не меняется."],solution:["Путь не менялся с "+t1+" с до "+t2+" с.","Стоял "+t2+" − "+t1+" = "+rest+" с.","Ответ: "+rest+" с."]});
+   if(ask===1) return inp({topic:"График: путь",fig,prompt:"Какой путь (м) прошло тело за всё время движения, показанное на графике?",check:num(s3),answer:String(s3),hints:["Путь в конце графика — значение s при последнем t."],solution:["В момент t = "+T+" с график показывает s = "+s3+" м.","Ответ: "+s3+" м."]});
+   return inp({topic:"График: скорость на участке",fig,prompt:"С какой скоростью (м/с) тело двигалось на последнем участке графика?",check:num(v2),answer:String(v2),hints:["Скорость на участке = изменение пути : время участка."],solution:["Путь на последнем участке: "+s3+" − "+s1+" = "+(s3-s1)+" м за "+t3+" с.","v = "+(s3-s1)+" : "+t3+" = "+v2+" м/с.","Ответ: "+v2+" м/с."]}); }},
+ {f:(r)=>{ const v=r.int(2,8), t=r.int(3,9); const S=v*t; const T=10; return inp({topic:"График скорости: путь",fig:{t:"graph",xr:[0,10],yr:[0,10],xs:1,ys:1,tx:2,ty:2,xl:"t, с",yl:"v, м/с",lines:[{pts:[[0,v],[10,v]]}],dots:[{x:t,y:v,proj:true,l:"t = "+t+" с"}]},prompt:"На графике — зависимость скорости тела от времени. Какой путь (м) прошло тело за "+t+" с?",check:num(S),answer:String(S),hints:["Скорость постоянна (читаем по оси v). Путь = скорость · время."],solution:["Скорость постоянна: v = "+v+" м/с.","s = v · t = "+v+" · "+t+" = "+S+" м.","Ответ: "+S+" м."]}); }}
+]);
+
+/* ---- сила: рисунки (темы 12, 14, 13) ---- */
+X.add("phys7","12",[{f:(r)=>{ const names=[["сила тяжести","1"],["сила реакции опоры (нормальная)","2"],["сила трения","3"]]; const q=r.pick(names); const al=r.pick([25,30,35,40]);
+  return quiz({topic:"Силы на наклонной плоскости",fig:{t:"incline",ang:al,fl:"1",nl:"2",fr:"3"},prompt:"Брусок соскальзывает по наклонной плоскости. Какой цифрой на рисунке обозначена "+q[0]+"?",options:O(r,q[1],["1","2","3"].filter(x=>x!==q[1])),hints:["Сила тяжести направлена вертикально вниз; реакция опоры — перпендикулярно поверхности; трение — вдоль поверхности против движения."],solution:["Сила тяжести — вертикально вниз (1); реакция опоры перпендикулярна плоскости (2); сила трения направлена вдоль плоскости против движения (3).","Ответ: "+q[0]+" — цифра "+q[1]+"."]}); }}]);
+X.add("phys7","14",[{f:(r)=>{ const f1=r.int(3,12), f2=r.int(2,12); const same=r.chance(.4); const res=same?f1+f2:Math.abs(f1-f2); if(!same&&f1===f2) return null; const dir=f1>f2?"вправо":"влево";
+  return inp({topic:"Равнодействующая сил",fig:{t:"forces",body:"m",scale:5,f:[{dir:1,v:f1,l:"F₁ = "+f1+" Н"},{dir:same?1:-1,v:f2,l:"F₂ = "+f2+" Н",c:C0,dy:same?26:0}]},prompt:same?"На тело действуют две силы, направленные в одну сторону (рисунок). Найдите равнодействующую сил (Н).":"На тело действуют две силы в противоположные стороны (рисунок). Найдите модуль равнодействующей сил (Н).",check:num(res),answer:String(res),
+   hints:[same?"Силы одного направления складываются.":"Силы противоположных направлений вычитаются: из большей — меньшую."],solution:[same?"R = F₁ + F₂ = "+f1+" + "+f2+" = "+res+" Н.":"R = |F₁ − F₂| = |"+f1+" − "+f2+"| = "+res+" Н ("+(f1>f2?"направлена вправо":"направлена влево")+").","Ответ: "+res+" Н."]}); }}]);
+const C0="#dc2626";
+X.add("phys7","13",[{f:(r)=>{ let k,x; for(let i=0;i<20;i++){ k=r.pick([50,100,200,250,400,500,1000]); x=r.pick([2,4,5,10,20,25]); if((k*x)%100===0) break; } if((k*x)%100!==0) return null; const Fv=k*x/100; const len=70+Math.min(x,25)*3;
+  return inp({topic:"Закон Гука",fig:{t:"spring",len,mass:"груз",dim:"x = "+x+" см"},prompt:"Пружина жёсткостью k = "+k+" Н/м под действием груза удлинилась на x = "+x+" см (рисунок). Найдите силу упругости (Н).",check:num(Fv),answer:String(Fv),hints:["Закон Гука: F = k·x. Длину переведи в метры."],solution:["x = "+x+" см = "+D(x/100)+" м.","F = k·x = "+k+" · "+D(x/100)+" = "+Fv+" Н.","Ответ: "+Fv+" Н."]}); }}]);
+
+/* ---- рычаг (тема 23) ---- */
+X.add("phys7","23",[
+ {f:(r)=>{ const l1=r.int(2,8), l2=r.int(2,8); if(l1===l2) return null; const g=(a,b)=>b?g(b,a%b):a; const m=l2/g(l1,l2); const F1=m*r.int(1,6)*(r.chance(.5)?2:1); const F2=F1*l1/l2; if(F1>60||!Number.isInteger(F2)) return null;
+   return inp({topic:"Правило рычага",fig:{t:"lever",len:l1+l2,fulcrum:l1,loads:[{pos:0.15,down:true,label:F1+" Н"},{pos:l1+l2-0.15,down:true,label:"F = ?"}],dims:[[0,l1,l1+" м"],[l1,l1+l2,l2+" м"]]},prompt:"Рычаг находится в равновесии. Слева на расстоянии "+l1+" м от опоры действует сила "+F1+" Н, справа на расстоянии "+l2+" м — неизвестная сила F. Найдите F (Н).",check:num(F2),answer:String(F2),hints:["Правило рычага: F₁·l₁ = F₂·l₂.","F₂ = F₁·l₁ : l₂."],solution:["F₁·l₁ = F₂·l₂, значит F₂ = "+F1+" · "+l1+" : "+l2+".","F₂ = "+(F1*l1)+" : "+l2+" = "+F2+" Н.","Ответ: "+F2+" Н."]}); }},
+ {f:(r)=>{ const l1=r.int(2,6), F1=r.int(2,10)*2; const F2=r.pick([2,4,5,10].filter(x=>(F1*l1)%x===0)); if(!F2) return null; const l2=F1*l1/F2; if(l2>14||l2===l1) return null;
+   return inp({topic:"Плечо силы",fig:{t:"lever",len:l1+l2,fulcrum:l1,loads:[{pos:0.15,down:true,label:F1+" Н"},{pos:l1+l2-0.15,down:true,label:F2+" Н"}],dims:[[0,l1,l1+" м"],[l1,l1+l2,"l = ?"]]},prompt:"Рычаг в равновесии: слева сила "+F1+" Н на плече "+l1+" м, справа сила "+F2+" Н. Найдите правое плечо l (м).",check:num(l2),answer:String(l2),hints:["F₁·l₁ = F₂·l₂, откуда l₂ = F₁·l₁ : F₂."],solution:["l₂ = "+F1+" · "+l1+" : "+F2+" = "+(F1*l1)+" : "+F2+" = "+l2+" м.","Ответ: "+l2+" м."]}); }}]);
+
+/* ---- давление жидкости, сообщающиеся сосуды (17, 18) ---- */
+X.add("phys7","17",[{f:(r)=>{ const L=r.pick([["вода",1000],["керосин",800],["масло машинное",900],["ртуть",13600]]); const h=r.int(2,12); const p=fx(9.8*L[1]*h); const hh=h+" м";
+  return inp({topic:"Давление жидкости",fig:{t:"vessel",level:0.7,pt:0.18,point:"A",h:"h = "+hh,liq:L[0]},prompt:"В сосуде находится "+L[0]+" (плотность "+L[1]+" кг/м³). Найдите давление жидкости в точке A на глубине "+h+" м. Принять g = 9,8 Н/кг. Ответ в Па.",check:num(p),answer:D(p),hints:["p = ρ·g·h."],solution:["p = ρ·g·h = "+L[1]+" · 9,8 · "+h+".","p = "+D(p)+" Па.","Ответ: "+D(p)+" Па."]}); }}]);
+X.add("phys7","18",[{f:(r)=>{ const ho=r.pick([10,20,25,30,40,50]); const hw=ho*0.8; const k=2.2, yb=150; const yL=yb-hw*k, yR=yb-ho*k; const ask=r.chance(.5);
+  const fig={t:"utube",yL:Math.round(yL),yR:Math.round(yR),yS:yb,oil:true,dims:[{x:46,y1:Math.round(yL),y2:yb,l:ask?"h₁ = ?":"h₁ = "+D(hw)+" см",dx:-6,a:"end"},{x:276,y1:Math.round(yR),y2:yb,l:ask?"h₂ = "+ho+" см":"h₂ = ?",dx:8}],tx:[{x:100,y:226,s:"вода",c:C0.replace("dc2626","2563eb")},{x:222,y:226,s:"керосин / вода",c:"#b45309"}]};
+  fig.tx=[{x:97,y:226,s:"вода",c:"#2563eb"},{x:223,y:226,s:"керосин над водой",c:"#b45309"}];
+  if(ask) return inp({topic:"Сообщающиеся сосуды",fig,prompt:"В U-образной трубке слева — вода, справа — слой керосина высотой h₂ = "+ho+" см над уровнем границы (пунктир). Какова высота водяного столба h₁ над этим уровнем (см)? ρ воды = 1000, ρ керосина = 800 кг/м³.",check:num(fx(hw)),answer:D(hw),hints:["Давления на уровне границы равны: ρ₁·g·h₁ = ρ₂·g·h₂."],solution:["ρ(воды)·h₁ = ρ(керосина)·h₂.","h₁ = 800 · "+ho+" : 1000 = "+D(hw)+" см.","Ответ: "+D(hw)+" см."]});
+  return inp({topic:"Сообщающиеся сосуды",fig,prompt:"В U-образной трубке слева — вода высотой h₁ = "+D(hw)+" см над уровнем границы (пунктир), справа — слой керосина. Найдите высоту керосина h₂ (см). ρ воды = 1000, ρ керосина = 800 кг/м³.",check:num(ho),answer:String(ho),hints:["Давления на уровне границы равны: ρ₁·h₁ = ρ₂·h₂."],solution:["h₂ = ρ(воды)·h₁ : ρ(керосина) = 1000 · "+D(hw)+" : 800 = "+ho+" см.","Ответ: "+ho+" см."]}); }}]);
+
+/* ---- плавание тел (20) ---- */
+X.add("phys7","20",[{f:(r)=>{ const ft=r.pick([10,15,20,25,30]), fa=r.pick([10,15,20,25,30]); const res=ft>fa?"тонет":(ft<fa?"всплывает":"плавает (находится в равновесии)"); const all=["тонет","всплывает","плавает (находится в равновесии)"];
+  return quiz({topic:"Плавание тел",fig:{t:"float",ft,fa},prompt:"Тело полностью погружено в воду. Сила тяжести Fт = "+ft+" Н, выталкивающая сила Fₐ = "+fa+" Н (рисунок). Что будет с телом?",options:O(r,res,all.filter(x=>x!==res)),hints:["Сравни силы: если Fт > Fₐ — тонет; если Fт < Fₐ — всплывает; если равны — плавает внутри жидкости."],solution:["Fт = "+ft+" Н, Fₐ = "+fa+" Н.",ft>fa?"Fт > Fₐ — тело тонет.":(ft<fa?"Fт < Fₐ — тело всплывает.":"Fт = Fₐ — тело находится в равновесии (плавает)."),"Ответ: "+res+"."]}); }}]);
+})(typeof window!=="undefined"?window:globalThis);
+
+</script>
+<script>
+/* ===== Алгебра 7: графики и диаграммы ===== */
+(function(G){
+"use strict";
+const F=G.FM, X=G.FMX, C=G.FMC; if(!F.COURSES.alg7) return;
+const inp=o=>{ o.type="input"; return o; }, quiz=o=>{ o.type="quiz"; return o; };
+const num=v=>({kind:"num",ref:String(v)}); const M="−"; const sg=v=>String(v).replace("-",M);
+const O=(r,good,wr)=>r.shuffle([{t:good,ok:true}].concat(wr.filter((w,i,a)=>w!==good&&a.indexOf(w)===i).slice(0,3).map(w=>({t:w,ok:false}))));
+const lin=(k,b)=>{ const kk=k===1?"":(k===-1?M:sg(k)); let s="y = "+(k===0?"":kk+"x"); if(b>0) s+=(k===0?"":" + ")+b; else if(b<0) s+=(k===0?M:" "+M+" ")+Math.abs(b); else if(k===0) s+="0"; return s; };
+function clipLine(k,b,xr,yr){ let x0=xr[0],x1=xr[1]; if(k!==0){ const a=(yr[0]-b)/k, c=(yr[1]-b)/k; const lo=Math.min(a,c), hi=Math.max(a,c); x0=Math.max(x0,lo); x1=Math.min(x1,hi); } return [[x0,k*x0+b],[x1,k*x1+b]]; }
+function curve(f,xr,yr,n,skip){ const segs=[]; let cur=[]; for(let i=0;i<=n;i++){ const x=xr[0]+(xr[1]-xr[0])*i/n; const y=f(x); if(!isFinite(y)||y<yr[0]||y>yr[1]||(skip&&skip(x))){ if(cur.length>1) segs.push(cur); cur=[]; } else cur.push([x,y]); } if(cur.length>1) segs.push(cur); return segs; }
+const baseG=(xr,yr,lines,dots,extra)=>Object.assign({t:"graph",cross:true,xr,yr,xs:1,ys:1,xl:"x",yl:"y",lines,dots,max:380},extra||{});
+
+/* 3.2.2 линейная функция */
+X.add("alg7","3.2.2",[
+ {f:(r)=>{ const k=r.nz(-3,3), b=r.int(-4,4); const xr=[-6,6],yr=[-6,6]; const x1=r.int(-2,0), x2=x1+r.int(1,2); const y1=k*x1+b,y2=k*x2+b; if(Math.abs(y1)>5||Math.abs(y2)>5) return null; const mode=r.int(0,1);
+   const fig=baseG(xr,yr,[{pts:clipLine(k,b,xr,yr)[0].length?clipLine(k,b,xr,yr):[]}],[{x:x1,y:y1,l:"("+sg(x1)+"; "+sg(y1)+")",proj:true},{x:x2,y:y2,l:"("+sg(x2)+"; "+sg(y2)+")",proj:true}]);
+   if(mode===0) return inp({topic:"Угловой коэффициент по графику",fig,prompt:"Прямая — график функции y = kx + b. По двум отмеченным точкам найдите k.",check:num(k),answer:String(k),hints:["k = (y₂ − y₁) : (x₂ − x₁).","Подставь координаты точек."],solution:["k = ("+sg(y2)+" − ("+sg(y1)+")) : ("+sg(x2)+" − ("+sg(x1)+")) = "+sg(y2-y1)+" : "+sg(x2-x1)+" = "+sg(k)+".","Ответ: k = "+sg(k)+"."]});
+   const fig2=baseG(xr,yr,[{pts:clipLine(k,b,xr,yr)}],[{x:0,y:b,l:"(0; "+sg(b)+")"},{x:x2,y:y2,l:"("+sg(x2)+"; "+sg(y2)+")"}]);
+   return quiz({topic:"Формула линейной функции по графику",fig:fig2,prompt:"Какая формула задаёт функцию, график которой показан на рисунке (отмечены две точки)?",options:O(r,lin(k,b),[lin(-k,b),lin(k,-b),lin(b===0?k+1:b,k),lin(k+1,b)]),hints:["b — ордината точки пересечения с осью y.","k найди по двум точкам: (y₂ − y₁) : (x₂ − x₁)."],solution:["b = "+sg(b)+" (точка (0; "+sg(b)+")).","k = ("+sg(y2)+" − "+sg(b)+") : ("+sg(x2)+" − 0) = "+sg(k)+".","Ответ: "+lin(k,b)+"."]}); }},
+ {f:(r)=>{ const k=r.nz(-3,3), b=r.int(-3,3); const x=r.int(-3,3); const y=k*x+b; if(Math.abs(y)>5) return null; const xr=[-6,6],yr=[-6,6];
+   return inp({topic:"Значение функции по графику",fig:baseG(xr,yr,[{pts:clipLine(k,b,xr,yr)}],[{x:0,y:b,l:"(0; "+sg(b)+")"},{x:1,y:k+b,l:"(1; "+sg(k+b)+")"}]),prompt:"График функции y = kx + b показан на рисунке (отмечены две точки). Найдите значение функции при x = "+sg(x)+".",check:num(y),answer:String(y),hints:["Найди k и b по точкам, затем подставь x."],solution:["b = "+sg(b)+"; k = "+sg(k+b)+" − "+sg(b)+" = "+sg(k)+".","y("+sg(x)+") = "+sg(k)+"·("+sg(x)+") + "+sg(b)+" = "+sg(y)+".","Ответ: "+sg(y)+"."]}); }}]);
+
+/* 3.2.1 прямая пропорциональность */
+X.add("alg7","3.2.1",[{f:(r)=>{ const k=r.nz(-4,4); const xr=[-6,6],yr=[-6,6]; const x=Math.abs(k)>=3?1:r.pick([1,2]); if(Math.abs(k*x)>5) return null;
+  return inp({topic:"Коэффициент пропорциональности по графику",fig:baseG(xr,yr,[{pts:clipLine(k,0,xr,yr)}],[{x,y:k*x,l:"("+x+"; "+sg(k*x)+")",proj:true}]),prompt:"На рисунке — график прямой пропорциональности y = kx. Найдите k.",check:num(k),answer:String(k),hints:["k = y : x для любой точки графика (кроме начала координат)."],solution:["Точка ("+x+"; "+sg(k*x)+") лежит на графике: "+sg(k*x)+" = k · "+x+".","k = "+sg(k*x)+" : "+x+" = "+sg(k)+".","Ответ: k = "+sg(k)+"."]}); }}]);
+
+/* 3.2.3 взаимное расположение */
+X.add("alg7","3.2.3",[{f:(r)=>{ const k1=r.nz(-3,3), b1=r.int(-4,4); const mode=r.int(0,2); let k2,b2; if(mode===0){ k2=k1; do{ b2=r.int(-4,4); }while(b2===b1); } else if(mode===1){ do{ k2=r.nz(-3,3); }while(k2===k1); b2=r.int(-4,4); } else { k2=k1; b2=b1; }
+  const xr=[-6,6],yr=[-6,6]; const lines=[{pts:clipLine(k1,b1,xr,yr),c:"#2563eb"}]; if(mode!==2) lines.push({pts:clipLine(k2,b2,xr,yr),c:"#dc2626"});
+  const ans=mode===0?"параллельны":(mode===1?"пересекаются":"совпадают"); const all=["параллельны","пересекаются","совпадают"];
+  return quiz({topic:"Взаимное расположение графиков",fig:baseG(xr,yr,lines,[]),prompt:"Графики функций\n"+lin(k1,b1)+"  (синий)\n"+lin(k2,b2)+"  (красный)\nКак расположены прямые?",options:O(r,ans,all.filter(x=>x!==ans)),hints:["Сравни угловые коэффициенты k: при равных k и разных b прямые параллельны."],solution:["k₁ = "+sg(k1)+", k₂ = "+sg(k2)+"; b₁ = "+sg(b1)+", b₂ = "+sg(b2)+".",mode===0?"k равны, b разные — параллельны.":(mode===1?"k разные — пересекаются.":"k и b равны — совпадают."),"Ответ: "+ans+"."]}); }}]);
+
+/* 3.2.4 y=b и x=a */
+X.add("alg7","3.2.4",[{f:(r)=>{ const v=r.nz(-5,5); const hor=r.chance(.5); const xr=[-6,6],yr=[-6,6]; const pts=hor?[[-6,v],[6,v]]:[[v,-6],[v,6]]; const ans=(hor?"y = ":"x = ")+sg(v);
+  return quiz({topic:"Прямая, параллельная оси",fig:baseG(xr,yr,[{pts}],[hor?{x:0,y:v,l:"(0; "+sg(v)+")"}:{x:v,y:0,l:"("+sg(v)+"; 0)",dy:-10}]),prompt:"Какое уравнение задаёт прямую на рисунке?",options:O(r,ans,[(hor?"x = ":"y = ")+sg(v),(hor?"y = ":"x = ")+sg(-v),(hor?"x = ":"y = ")+sg(-v)]),hints:["Горизонтальная прямая задаётся уравнением y = b, вертикальная — x = a."],solution:[hor?"Прямая параллельна оси x и проходит через y = "+sg(v)+".":"Прямая параллельна оси y и проходит через x = "+sg(v)+".","Ответ: "+ans+"."]}); }}]);
+
+/* 3.3.2 системы — графически */
+X.add("alg7","3.3.2",[{f:(r)=>{ const k1=r.nz(-3,3); let k2=r.nz(-3,3); if(k1===k2) k2=k1+1; if(k2===0) k2=2; const x=r.int(-3,3), y=r.int(-3,3); const b1=y-k1*x, b2=y-k2*x; if(Math.abs(b1)>5||Math.abs(b2)>5) return null; const xr=[-6,6],yr=[-6,6];
+  return inp({topic:"Система уравнений: график",fig:baseG(xr,yr,[{pts:clipLine(k1,b1,xr,yr),c:"#2563eb"},{pts:clipLine(k2,b2,xr,yr),c:"#dc2626"}],[{x,y,proj:true}]),prompt:"Графики функций "+lin(k1,b1)+" (синий) и "+lin(k2,b2)+" (красный) показаны на рисунке. Найдите решение системы уравнений — координаты точки пересечения. Ответ в виде (x; y).",check:{kind:"pair",ref:[String(x),String(y)]},answer:"("+sg(x)+"; "+sg(y)+")",hints:["Решение системы — точка, в которой графики пересекаются.","Прочитай её координаты по осям (пунктирные линии помогают)."],solution:["Графики пересекаются в точке ("+sg(x)+"; "+sg(y)+").","Проверка: "+sg(k1)+"·("+sg(x)+") + "+sg(b1)+" = "+sg(y)+" и "+sg(k2)+"·("+sg(x)+") + "+sg(b2)+" = "+sg(y)+".","Ответ: ("+sg(x)+"; "+sg(y)+")."]}); }}]);
+
+/* 3.4.x степенные функции */
+X.add("alg7","3.4.1",[{f:(r)=>{ const a=r.int(-3,3); if(a===0) return null; const x=r.pick([1,2]); if(Math.abs(a*x*x)>9) return null; const xr=[-4,4],yr=[-9,9]; const A=a;
+  return quiz({topic:"Парабола y = ax²",fig:baseG(xr,yr,[{segs:curve(t=>A*t*t,xr,yr,120)}],[{x,y:a*x*x,l:"("+x+"; "+sg(a*x*x)+")",proj:true}],{ys:3,ty:3}),prompt:"На рисунке — график функции y = ax². Какая формула задаёт эту функцию?",options:O(r,"y = "+(a===1?"":(a===-1?M:sg(a)))+"x²",["y = "+(-a===1?"":(-a===-1?M:sg(-a)))+"x²","y = "+(a+1===1?"":(a+1===-1?M:sg(a+1)))+"x²".replace("y = 0x²","y = 2x²"),"y = "+(Math.abs(a)===1?"":sg(a))+"x³".replace("y = x³","y = x³")]),hints:["Подставь координаты отмеченной точки в формулу y = ax² и найди a."],solution:["Точка ("+x+"; "+sg(a*x*x)+"): "+sg(a*x*x)+" = a · "+x+"².","a = "+sg(a*x*x)+" : "+(x*x)+" = "+sg(a)+".","Ответ: y = "+(a===1?"":(a===-1?M:sg(a)))+"x²."]}); }}]);
+X.add("alg7","3.4.2",[{f:(r)=>{ const x=r.pick([1,2]); const xr=[-3,3],yr=[-9,9]; const mode=r.int(0,1);
+  return inp({topic:"Кубическая функция: нечётность",fig:baseG(xr,yr,[{segs:curve(t=>t*t*t,xr,yr,120)}],[{x,y:x*x*x,l:"("+x+"; "+(x*x*x)+")",proj:true}],{ys:3,ty:3}),prompt:"На рисунке — график функции y = x³ (отмечена точка). Найдите значение функции при x = "+sg(-x)+".",check:num(-x*x*x),answer:String(-x*x*x),hints:["График симметричен относительно начала координат: f(−x) = −f(x)."],solution:["f("+x+") = "+(x*x*x)+". Функция нечётная: f("+sg(-x)+") = −"+(x*x*x)+" = "+sg(-x*x*x)+".","Проверка: ("+sg(-x)+")³ = "+sg(-x*x*x)+".","Ответ: "+sg(-x*x*x)+"."]}); }}]);
+X.add("alg7","3.4.3",[{f:(r)=>{ const a=r.pick([1,2,3,-1,-2,-3]); const cube=r.chance(.4); const x=r.pick([1,2]); const val=cube?a*x*x*x:a*x*x; if(Math.abs(val)>9) return null; const xr=[-4,4],yr=[-9,9]; const nm=cube?"x³":"x²"; const aStr=a===1?"":(a===-1?M:sg(a));
+  return quiz({topic:"Функции y = ax² и y = ax³",fig:baseG(xr,yr,[{segs:curve(t=>cube?a*t*t*t:a*t*t,xr,yr,140)}],[{x,y:val,l:"("+x+"; "+sg(val)+")",proj:true}],{ys:3,ty:3}),prompt:"График проходит через отмеченную точку. Какая формула задаёт функцию?",options:O(r,"y = "+aStr+nm,["y = "+(-a===1?"":(-a===-1?M:sg(-a)))+nm,"y = "+aStr+(cube?"x²":"x³"),"y = "+(a+1===0?"":(a+1===1?"":(a+1===-1?M:sg(a+1))))+nm]),hints:["Подставь координаты точки в y = a"+nm+" и найди a.","Форма графика подскажет степень: парабола — x², «S-образная» кривая — x³."],solution:["Точка ("+x+"; "+sg(val)+"): "+sg(val)+" = a · "+x+(cube?"³":"²")+".","a = "+sg(val)+" : "+(cube?x*x*x:x*x)+" = "+sg(a)+".","Ответ: y = "+aStr+nm+"."]}); }}]);
+X.add("alg7","3.5",[{f:(r)=>{ const k=r.pick([2,3,4,6,-2,-3,-4,-6]); const xr=[-7,7],yr=[-7,7]; const x=r.pick([1,2,3].filter(v=>k%v===0)); const y=k/x; if(Math.abs(y)>6) return null; const mode=r.int(0,1);
+  const fig=baseG(xr,yr,[{segs:curve(t=>k/t,xr,yr,280,t=>Math.abs(t)<0.05)}],[{x,y,l:"("+x+"; "+sg(y)+")",proj:true}]);
+  if(mode===0) return inp({topic:"Гипербола: коэффициент k",fig,prompt:"На рисунке — график функции y = k/x. Найдите k.",check:num(k),answer:String(k),hints:["k = x · y для любой точки графика."],solution:["k = x·y = "+x+" · "+sg(y)+" = "+sg(k)+".","Ответ: k = "+sg(k)+"."]});
+  const x2=r.pick([1,2,3,6].filter(v=>k%v===0&&v!==x)); if(!x2) return null; const y2=k/x2; return inp({topic:"Гипербола: значение функции",fig,prompt:"На рисунке — график функции y = k/x. Найдите значение функции при x = "+x2+".",check:num(y2),answer:String(y2),hints:["Найди k = x·y по отмеченной точке, затем y = k/x."],solution:["k = "+x+" · "+sg(y)+" = "+sg(k)+".","y("+x2+") = "+sg(k)+" : "+x2+" = "+sg(y2)+".","Ответ: "+sg(y2)+"."]}); }}]);
+
+/* 4.x диаграммы */
+function barData(r,total){ for(let t=0;t<60;t++){ const labs=r.pick([["2","3","4","5"],["Пн","Вт","Ср","Чт","Пт"],["а","б","в","г"]]); const n=labs.length; const v=[]; let rest=total; for(let i=0;i<n-1;i++){ const x=r.int(1,Math.max(1,Math.floor(rest/(n-i)*1.6))); v.push(x); rest-=x; } if(rest<1) continue; v.push(rest); if(new Set(v).size===n) return {labs,vals:v}; } return null; }
+X.add("alg7","4.1",[{f:(r)=>{ const total=r.pick([20,24,25,30]); const d=barData(r,total); if(!d) return null; const mx=Math.max(...d.vals), mn=Math.min(...d.vals); const mode=r.int(0,2); const title=d.labs[0]==="2"?"Оценки за контрольную (число учеников)":d.labs[0]==="Пн"?"Число решённых задач по дням":"Результаты опроса";
+   const fig={t:"bars",vals:d.vals,labs:d.labs,max:Math.max(...d.vals)+1,step:Math.max(1,Math.ceil(mx/5))};
+   if(mode===0){ const i=d.vals.indexOf(mx); return quiz({topic:"Мода по диаграмме",fig,prompt:title+". Какое значение встречается чаще всего (мода)?",options:O(r,d.labs[i],d.labs.filter((_,k)=>k!==i)),hints:["Мода — значение с наибольшей частотой (самый высокий столбец)."],solution:["Самый высокий столбец — «"+d.labs[i]+"» ("+mx+").","Ответ: "+d.labs[i]+"."]}); }
+   if(mode===1) return inp({topic:"Размах по диаграмме",fig,prompt:title+". Найдите разность между наибольшим и наименьшим значениями высот столбцов.",check:num(mx-mn),answer:String(mx-mn),hints:["Прочитай высоты самого высокого и самого низкого столбцов."],solution:["Наибольшее значение "+mx+", наименьшее "+mn+".",mx+" − "+mn+" = "+(mx-mn)+".","Ответ: "+(mx-mn)+"."]});
+   return inp({topic:"Сумма по диаграмме",fig,prompt:title+". Найдите сумму значений всех столбцов.",check:num(total),answer:String(total),hints:["Сложи высоты всех столбцов."],solution:[d.vals.join(" + ")+" = "+total+".","Ответ: "+total+"."]}); }}]);
+X.add("alg7","4.2",[{f:(r)=>{ const total=r.pick([10,20,25,50]); const d=barData(r,total); if(!d) return null; const i=r.int(0,d.vals.length-1); const v=d.vals[i]; const pct=v*100/total; if(!Number.isInteger(pct)) return null; const fig={t:"bars",vals:d.vals,labs:d.labs,max:Math.max(...d.vals)+1,step:Math.max(1,Math.ceil(Math.max(...d.vals)/5))};
+  return inp({topic:"Относительная частота по диаграмме",fig,prompt:"По диаграмме найдите относительную частоту значения «"+d.labs[i]+"» в процентах. (Всего измерений: "+total+".)",check:num(pct),answer:String(pct),hints:["Относительная частота = частота : общее число измерений.","Переведи в проценты, умножив на 100."],solution:["Частота значения «"+d.labs[i]+"» равна "+v+", всего "+total+".","Относительная частота = "+v+" : "+total+" = "+C.dec(v/total)+" = "+pct+" %.","Ответ: "+pct+" %."]}); }}]);
+})(typeof window!=="undefined"?window:globalThis);
+
+</script>
+<script>
+/* ===== Математика 3 класс (Тамина): задания с рисунками ===== */
+(function(G){
+"use strict";
+const F=G.FM, X=G.FMX; if(!F.COURSES.math3) return;
+const inp=o=>{ o.type="input"; return o; }, quiz=o=>{ o.type="quiz"; return o; };
+const num=v=>({kind:"num",ref:String(v)});
+const O=(r,good,wr)=>r.shuffle([{t:good,ok:true}].concat(wr.filter((w,i,a)=>w!==good&&a.indexOf(w)===i).slice(0,3).map(w=>({t:w,ok:false}))));
+
+/* t3: площадь по клеткам */
+X.add("math3","t3",[{f:(r)=>{ const cols=r.int(7,10), rows=r.int(5,6); const a=r.int(2,5), b=r.int(2,4); const cells=[]; const x0=r.int(0,cols-a), y0=r.int(0,rows-b); for(let i=0;i<a;i++) for(let j=0;j<b;j++) cells.push([x0+i,y0+j]);
+  const extra=r.chance(.5); let n=a*b; if(extra){ const ex=[x0+a,y0]; if(ex[0]<cols){ cells.push(ex); n++; } }
+  return inp({topic:"Площадь по клеткам",fig:{t:"grid",cols,rows,cells,k:24,note:"1 клетка = 1 см²"},prompt:"Сторона клетки — 1 см. Найди площадь закрашенной фигуры (в см²).",check:num(n),answer:String(n),hints:["Посчитай клетки. Площадь одной клетки — 1 см².","Если фигура — прямоугольник, умножь число клеток в ряду на число рядов."],solution:["Закрашено "+n+" клеток, каждая — 1 см².",n+" · 1 = "+n+" (см²).","Ответ: "+n+" см²."]}); }}]);
+
+/* t4: периметр и площадь */
+X.add("math3","t4",[
+ {f:(r)=>{ const a=r.int(4,12), b=r.int(2,a-1); const ask=r.chance(.5); const P=(a+b)*2, S=a*b;
+   return inp({topic:"Периметр и площадь (рисунок)",fig:{t:"rect",a,b,la:a+" см",lb:b+" см",right:true},prompt:ask?"Найди периметр прямоугольника (см).":"Найди площадь прямоугольника (см²).",check:num(ask?P:S),answer:String(ask?P:S),hints:ask?["Периметр — сумма длин всех сторон: (a + b) · 2."]:["Площадь прямоугольника: a · b."],solution:ask?["("+a+" + "+b+") · 2 = "+(a+b)+" · 2 = "+P+" (см).","Ответ: "+P+" см."]:[a+" · "+b+" = "+S+" (см²).","Ответ: "+S+" см²."]}); }},
+ {f:(r)=>{ const a=r.int(5,12), b=r.int(4,10); const c=r.int(2,a-2), d=r.int(1,b-2); const P=(a+b)*2, S=a*b-c*d; const ask=r.chance(.5);
+   return inp({topic:"Составная фигура",fig:{t:"rect",shape:"L",a,b,c,d,k:Math.min(18,150/b,250/a),lab:{a:a+" см",b:b+" см",c:c+" см",d:d+" см"}},prompt:ask?"Фигура получена из прямоугольника вырезанием прямоугольного угла. Найди периметр фигуры (см).":"Фигура получена из прямоугольника вырезанием прямоугольного угла. Найди площадь фигуры (см²).",check:num(ask?P:S),answer:String(ask?P:S),
+    hints:ask?["Периметр такой фигуры равен периметру большого прямоугольника."]:["Из площади большого прямоугольника вычти площадь вырезанного."],solution:ask?["Периметр равен периметру большого прямоугольника "+a+" × "+b+": ("+a+" + "+b+") · 2 = "+P+" (см).","Ответ: "+P+" см."]:["1) "+a+" · "+b+" = "+(a*b)+" (см²) — большой прямоугольник","2) "+c+" · "+d+" = "+(c*d)+" (см²) — вырезанная часть","3) "+(a*b)+" − "+(c*d)+" = "+S+" (см²)","Ответ: "+S+" см²."]}); }}]);
+
+/* t5 и t15: параллелепипед */
+const boxGen=(topic)=>({f:(r)=>{ const a=r.int(2,9), b=r.int(2,7), c=r.int(2,6); const mode=r.int(0,1); const V=a*b*c; const cube=r.chance(.25);
+  if(cube){ const e=r.int(2,7); return inp({topic,fig:{t:"box",a:e,b:e,c:e,lab:{a:e+" см",b:e+" см",c:e+" см"}},prompt:"Ребро куба — "+e+" см. Найди объём куба (см³).",check:num(e*e*e),answer:String(e*e*e),hints:["Объём куба: ребро · ребро · ребро."],solution:[e+" · "+e+" · "+e+" = "+(e*e*e)+" (см³).","Ответ: "+(e*e*e)+" см³."]}); }
+  if(mode===0) return inp({topic,fig:{t:"box",a,b,c,lab:{a:a+" см",b:b+" см",c:c+" см"}},prompt:"Найди объём прямоугольного параллелепипеда (см³): длина "+a+" см, ширина "+b+" см, высота "+c+" см.",check:num(V),answer:String(V),hints:["V = длина · ширина · высота."],solution:[a+" · "+b+" · "+c+" = "+V+" (см³).","Ответ: "+V+" см³."]});
+  const S=a*b; return inp({topic,fig:{t:"box",a,b,c,lab:{a:a+" см",b:b+" см",c:"?"}},prompt:"Объём прямоугольного параллелепипеда "+V+" см³, длина "+a+" см, ширина "+b+" см. Найди высоту (см).",check:num(c),answer:String(c),hints:["Площадь основания = длина · ширина.","Высота = объём : площадь основания."],solution:["1) "+a+" · "+b+" = "+S+" (см²) — площадь основания","2) "+V+" : "+S+" = "+c+" (см) — высота","Ответ: "+c+" см."]}); }});
+X.add("math3","t5",[boxGen("Объём (рисунок)")]); X.add("math3","t15",[boxGen("Параллелепипед (рисунок)")]);
+
+/* t8: диаграммы */
+X.add("math3","t8",[{f:(r)=>{ const labs=r.pick([["Пн","Вт","Ср","Чт","Пт"],["1 кл","2 кл","3 кл","4 кл"]]); const unit=labs[0]==="Пн"?"книг прочитали за день":"учеников пришли на праздник"; const vals=labs.map(()=>r.int(3,9)); const i=r.int(0,vals.length-1), j=r.int(0,vals.length-1); const mode=r.int(0,2);
+  const fig={t:"bars",vals,labs,max:10,step:2}; if(mode===0) return inp({topic:"Диаграмма",fig,prompt:"Сколько всего человек (по диаграмме)? На диаграмме — число: "+unit+".",check:num(vals.reduce((a,b)=>a+b,0)),answer:String(vals.reduce((a,b)=>a+b,0)),hints:["Прочитай значение каждого столбца и сложи."],solution:[vals.join(" + ")+" = "+vals.reduce((a,b)=>a+b,0)+".","Ответ: "+vals.reduce((a,b)=>a+b,0)+"."]});
+  if(i===j||vals[i]===vals[j]) return null; const hi=vals[i]>vals[j]?i:j, lo=hi===i?j:i; if(mode===1) return inp({topic:"Диаграмма",fig,prompt:"На сколько значение для «"+labs[hi]+"» больше, чем для «"+labs[lo]+"»?",check:num(vals[hi]-vals[lo]),answer:String(vals[hi]-vals[lo]),hints:["Найди оба значения и вычти меньшее из большего."],solution:[vals[hi]+" − "+vals[lo]+" = "+(vals[hi]-vals[lo])+".","Ответ: на "+(vals[hi]-vals[lo])+"."]});
+  const mx=Math.max(...vals); if(vals.filter(v=>v===mx).length>1) return null; const im=vals.indexOf(mx); return quiz({topic:"Диаграмма",fig,prompt:"Какое значение самое большое (какой столбец самый высокий)?",options:O(r,labs[im],labs.filter((_,k)=>k!==im)),hints:["Найди самый высокий столбец."],solution:["Самый высокий столбец — «"+labs[im]+"» ("+mx+").","Ответ: "+labs[im]+"."]}); }}]);
+
+/* t9: доли */
+X.add("math3","t9",[{f:(r)=>{ const n=r.pick([4,6,8,10,5,3]); const cols=n<=5?n:(n===6?3:(n===8?4:5)); const rows=n/cols; const k=r.int(1,n-1); const cells=[]; for(let i=0;i<k;i++) cells.push([i%cols,Math.floor(i/cols)]);
+  const mode=r.int(0,1); if(mode===0) return quiz({topic:"Доли (рисунок)",fig:{t:"grid",cols,rows,cells,k:Math.min(44,250/cols),h:rows*48+24},prompt:"Фигура разделена на "+n+" равных частей. Какая часть фигуры закрашена?",options:O(r,k+"/"+n,[(k+1<n?k+1:k-1)+"/"+n,k+"/"+(n+1),(n-k)+"/"+n===k+"/"+n?"1/"+n:(n-k)+"/"+n]),hints:["Знаменатель — на сколько равных частей разделили, числитель — сколько закрасили."],solution:["Всего частей: "+n+", закрашено: "+k+".","Закрашена "+k+"/"+n+" фигуры.","Ответ: "+k+"/"+n+"."]});
+  return inp({topic:"Доли (рисунок)",fig:{t:"grid",cols,rows,cells,k:Math.min(44,250/cols),h:rows*48+24},prompt:"Фигура разделена на "+n+" равных частей. Сколько частей закрашено? (Запиши число.)",check:num(k),answer:String(k),hints:["Посчитай закрашенные клетки."],solution:["Закрашено "+k+" из "+n+" частей.","Ответ: "+k+"."]}); }}]);
+
+/* t18: деньги */
+X.add("math3","t18",[{f:(r)=>{ const den=[1000,500,200,100,50,20,10]; const n=r.int(2,4); const items=[]; let sum=0; for(let i=0;i<n;i++){ const d=r.pick(den.filter(x=>x>=20)); items.push(d); sum+=d; } const mode=r.int(0,1); const pay=Math.ceil((sum+1)/500)*500; if(mode===0) return inp({topic:"Деньги (рисунок)",fig:{t:"coins",items:items.map(x=>x+" ₸")},prompt:"У Алмаса есть деньги: "+items.join(" ₸, ")+" ₸ (рисунок). Сколько всего тенге?",check:num(sum),answer:String(sum),hints:["Сложи все купюры."],solution:[items.join(" + ")+" = "+sum+" (₸).","Ответ: "+sum+" ₸."]});
+  return inp({topic:"Сдача (рисунок)",fig:{t:"coins",items:items.map(x=>x+" ₸")},prompt:"Покупка стоит "+sum+" ₸ (цены на рисунке). Покупатель дал "+pay+" ₸. Сколько тенге сдачи?",check:num(pay-sum),answer:String(pay-sum),hints:["Сдача = внесённая сумма − стоимость покупки."],solution:[pay+" − "+sum+" = "+(pay-sum)+" (₸).","Ответ: "+(pay-sum)+" ₸."]}); }}]);
+
+/* t19: множества */
+X.add("math3","t19",[{f:(r)=>{ const pool=[1,2,3,4,5,6,7,8,9,10,11,12]; const s=r.shuffle(pool); const na=r.int(1,3), nab=r.int(1,2), nb=r.int(1,3); const A=s.slice(0,na), AB=s.slice(na,na+nab), B=s.slice(na+nab,na+nab+nb); const mode=r.int(0,2);
+  const fig={t:"venn",na:"A",nb:"B",a:A,ab:AB,b:B};
+  if(mode===0) return inp({topic:"Круги Эйлера",fig,prompt:"Сколько чисел в множестве A (всего, вместе с общей частью)?",check:num(na+nab),answer:String(na+nab),hints:["В множество A входят числа из левого круга целиком, включая общую часть."],solution:["Только в A: "+na+", в общей части: "+nab+".","A содержит "+na+" + "+nab+" = "+(na+nab)+" чисел.","Ответ: "+(na+nab)+"."]});
+  if(mode===1) return inp({topic:"Круги Эйлера",fig,prompt:"Сколько чисел принадлежит и A, и B одновременно?",check:num(nab),answer:String(nab),hints:["Это числа в общей части кругов."],solution:["Числа в общей части: "+AB.join(", ")+".","Их "+nab+".","Ответ: "+nab+"."]});
+  return inp({topic:"Круги Эйлера",fig,prompt:"Сколько всего различных чисел изображено на рисунке (в A или в B)?",check:num(na+nab+nb),answer:String(na+nab+nb),hints:["Общую часть считай один раз."],solution:["Только A: "+na+"; общая часть: "+nab+"; только B: "+nb+".",na+" + "+nab+" + "+nb+" = "+(na+nab+nb)+".","Ответ: "+(na+nab+nb)+"."]}); }}]);
+
+/* t21: часы */
+const pad=n=>(n<10?"0":"")+n;
+X.add("math3","t21",[
+ {f:(r)=>{ const h=r.int(1,12), m=r.pick([0,5,10,15,20,25,30,35,40,45,50,55]); const txt=h+" ч "+(m?m+" мин":"ровно"); const w=[(h%12)+1+" ч "+(m?m+" мин":"ровно"),h+" ч "+((m+5)%60?((m+5)%60)+" мин":"ровно"),((h+10)%12+1)+" ч "+(m?m+" мин":"ровно"),h+" ч "+((m+30)%60?((m+30)%60)+" мин":"ровно")];
+   return quiz({topic:"Время по часам",fig:{t:"clock",h,m},prompt:"Сколько времени показывают часы? (Короткая стрелка — часовая, длинная красная — минутная.)",options:O(r,txt,w),hints:["Часовая стрелка показывает час, минутная — минуты (каждое число — 5 минут)."],solution:["Часовая стрелка у "+h+", минутная показывает "+m+" мин.","Ответ: "+txt+"."]}); }},
+ {f:(r)=>{ const h=r.int(1,11), m=r.pick([10,15,20,25,35,40,45,50]); const left=60-m; return inp({topic:"Время по часам",fig:{t:"clock",h,m},prompt:"Часы показывают "+h+" ч "+m+" мин. Сколько минут осталось до следующего часа?",check:num(left),answer:String(left),hints:["В часе 60 минут. Вычти показание минутной стрелки."],solution:["60 − "+m+" = "+left+" (мин).","Ответ: "+left+" мин."]}); }}]);
+})(typeof window!=="undefined"?window:globalThis);
+
+</script>
+<script>
+/* ===== Химия 7 и Биология 7: задания с рисунками ===== */
+(function(G){
+"use strict";
+const F=G.FM, X=G.FMX;
+const inp=o=>{ o.type="input"; return o; }, quiz=o=>{ o.type="quiz"; return o; };
+const num=v=>({kind:"num",ref:String(v)});
+const O=(r,good,wr)=>r.shuffle([{t:good,ok:true}].concat(wr.filter((w,i,a)=>w!==good&&a.indexOf(w)===i).slice(0,3).map(w=>({t:w,ok:false}))));
+const EL=["","водород","гелий","литий","бериллий","бор","углерод","азот","кислород","фтор","неон","натрий","магний","алюминий","кремний","фосфор","сера","хлор","аргон"];
+const SYM=G.FMFig.ELEM;
+const lvl=(n)=>n===1?"энергетический уровень":(n<5?"энергетических уровня":"энергетических уровней");
+
+if(F.COURSES.chem7){
+/* Строение атома: рисунок модели */
+X.add("chem7","3",[
+ {f:(r)=>{ const z=r.int(3,18); const sh=G.FMFig.shells(z); const mode=r.int(0,2);
+   const fig={t:"atom",z,nuc:"+"+z};
+   if(mode===0) return inp({topic:"Атом: электроны (рисунок)",fig,prompt:"На рисунке — модель атома. В ядре "+z+" протонов. Сколько электронов в атоме? (Атом электронейтрален.)",check:num(z),answer:String(z),hints:["Атом электронейтрален: число электронов равно числу протонов."],solution:["Число электронов = числу протонов = "+z+".","Ответ: "+z+"."]});
+   if(mode===1) return inp({topic:"Атом: внешний уровень (рисунок)",fig,prompt:"Сколько электронов находится на внешнем энергетическом уровне атома, изображённого на рисунке?",check:num(sh[sh.length-1]),answer:String(sh[sh.length-1]),hints:["Внешний уровень — самая дальняя от ядра окружность. Посчитай на ней точки-электроны."],solution:["Электроны по уровням: "+sh.join(", ")+".","На внешнем уровне — "+sh[sh.length-1]+".","Ответ: "+sh[sh.length-1]+"."]});
+   return inp({topic:"Атом: уровни (рисунок)",fig,prompt:"Сколько энергетических уровней у атома на рисунке?",check:num(sh.length),answer:String(sh.length),hints:["Каждая окружность вокруг ядра — один энергетический уровень."],solution:["Окружностей вокруг ядра: "+sh.length+".","Ответ: "+sh.length+"."]}); }},
+ {f:(r)=>{ const z=r.int(1,18); return quiz({topic:"Какой это элемент (рисунок)",fig:{t:"atom",z,nuc:"+"+z},prompt:"Определи химический элемент по модели атома. Заряд ядра — +"+z+".",options:O(r,EL[z]+" ("+SYM[z]+")",[1,2,3,4,5,6].map(()=>0).map(()=>0).length?[...new Set([z-1,z+1,z+2,z-2].filter(v=>v>=1&&v<=18))].map(v=>EL[v]+" ("+SYM[v]+")"):[]),hints:["Порядковый номер элемента равен заряду ядра.","Найди элемент с таким номером в Периодической таблице."],solution:["Заряд ядра +"+z+" — это порядковый номер "+z+".","Элемент №"+z+": "+EL[z]+" ("+SYM[z]+").","Ответ: "+EL[z]+" ("+SYM[z]+")."]}); }}]);
+/* Состав воздуха */
+X.add("chem7","4",[{f:(r)=>{ const q=r.pick([["кислород",21,"21 %"],["азот",78,"78 %"]]); const pie={t:"pie",showVal:false,parts:[["азот",78,"—"],["кислород",21,"—"],["прочие газы",1,"—"]]};
+  return quiz({topic:"Состав воздуха (диаграмма)",fig:pie,prompt:"На диаграмме показан состав воздуха по объёму. Сколько процентов объёма воздуха приходится на "+q[0]+"?",options:O(r,q[2],["21 %","78 %","1 %","50 %","0,03 %"].filter(x=>x!==q[2])),hints:["Больше всего в воздухе азота, примерно четверть — кислорода."],solution:["Воздух: азот ≈ 78 %, кислород ≈ 21 %, остальные газы ≈ 1 %.","Ответ: "+q[0]+" — "+q[2]+"."]}); }},
+ {f:(r)=>{ const subs=[["углерод C","CO₂","углекислый газ"],["сера S","SO₂","сернистый газ"],["магний Mg","MgO","оксид магния"],["водород H₂","H₂O","вода"],["фосфор P","P₂O₅","оксид фосфора(V)"]]; const s=r.pick(subs); const w=subs.filter(x=>x!==s).map(x=>x[1]);
+   return quiz({topic:"Горение: схема",fig:{t:"proc",in:[s[0].split(" ")[1]||s[0],"O₂"],mid:"горение",out:["?"],cond:"в кислороде"},prompt:"Схема горения: "+s[0]+" + O₂ → ? Какое вещество образуется?",options:O(r,s[1],w),hints:["При горении простого вещества в кислороде образуется оксид."],solution:["При горении вещество соединяется с кислородом, получается оксид.","Ответ: "+s[1]+" ("+s[2]+")."]}); }}]);
+}
+
+if(F.COURSES.bio7){
+/* Клетка: органоиды */
+const PLANT=[["ядро",160,118],["вакуоль",95,115],["хлоропласт",228,62],["митохондрия",112,196],["клеточная стенка",24,120]];
+const ANIM=[["ядро",160,118],["митохондрия",90,80],["клеточная мембрана",42,120]];
+const FUNC={"ядро":"хранит наследственную информацию","вакуоль":"хранит клеточный сок, запасает воду и вещества","хлоропласт":"осуществляет фотосинтез (содержит хлорофилл)","митохондрия":"«энергетическая станция» клетки (дыхание)","клеточная стенка":"придаёт клетке форму и защищает её (только у растений)","клеточная мембрана":"ограничивает клетку и регулирует вход и выход веществ"};
+X.add("bio7","3",[
+ {f:(r)=>{ const plant=r.chance(.6); const set=plant?PLANT:ANIM; const o=r.pick(set); const nm=set.map(x=>x[0]); const lx=o[1]<100?o[1]+40:o[1]-40, ly=o[2]<60?o[2]+36:o[2]-36;
+   return quiz({topic:"Клетка: органоиды (рисунок)",fig:{t:"cell",plant,marks:[[1,o[1],o[2],Math.max(18,Math.min(302,lx)),Math.max(18,Math.min(222,ly))]]},prompt:"Перед вами схема "+(plant?"растительной":"животной")+" клетки. Как называется часть клетки, обозначенная цифрой 1?",options:O(r,o[0],nm.filter(x=>x!==o[0]).concat(["рибосома"])),hints:["Сравни расположение и форму органоида с известными: ядро — крупное округлое, хлоропласты — зелёные."],solution:["Цифрой 1 обозначено: "+o[0]+" — "+FUNC[o[0]]+".","Ответ: "+o[0]+"."]}); }},
+ {f:(r)=>{ const f=r.pick(Object.keys(FUNC)); const plant=f==="клеточная стенка"||f==="хлоропласт"||f==="вакуоль"; const set=plant?PLANT:ANIM; const o=set.find(x=>x[0]===f); if(!o) return null; const lx=o[1]<100?o[1]+40:o[1]-40, ly=o[2]<60?o[2]+36:o[2]-36;
+   return quiz({topic:"Клетка: функции (рисунок)",fig:{t:"cell",plant,marks:[[1,o[1],o[2],Math.max(18,Math.min(302,lx)),Math.max(18,Math.min(222,ly))]]},prompt:"Какую функцию выполняет часть клетки под цифрой 1?",options:O(r,FUNC[f],Object.keys(FUNC).filter(x=>x!==f).map(x=>FUNC[x])),hints:["Определи органоид по рисунку, затем вспомни его роль."],solution:["Цифрой 1 обозначено: "+f+".",f+" — "+FUNC[f]+".","Ответ: "+FUNC[f]+"."]}); }}]);
+/* Экосистемы: цепи питания */
+const CH=[["Трава","Кузнечик","Лягушка","Змея"],["Злаки","Мышь","Сова"],["Трава","Заяц","Лиса"],["Фитопланктон","Рачок","Рыба","Чайка"],["Клевер","Шмель","Мышь","Лиса"],["Листья","Гусеница","Синица","Ястреб"]];
+X.add("bio7","1",[{f:(r)=>{ const ch=r.pick(CH); const i=r.int(0,ch.length-1); const nodes=ch.map((x,k)=>k===i?"?":x); const pool=[].concat(...CH).filter(x=>!ch.includes(x));
+  return quiz({topic:"Цепь питания (рисунок)",fig:{t:"boxes",nodes},prompt:"Стрелка показывает, кто кого съедает (кто чем питается). Какого звена не хватает в цепи питания?",options:O(r,ch[i],r.shuffle(pool).slice(0,3)),hints:["Цепь начинается с растения (продуцента). Затем идут организмы, которые питаются предыдущим звеном."],solution:["Цепь питания: "+ch.join(" → ")+".","Пропущено звено: "+ch[i]+".","Ответ: "+ch[i]+"."]}); }},
+ {f:(r)=>{ const ch=r.pick(CH); return quiz({topic:"Продуценты и консументы",fig:{t:"boxes",nodes:ch,dir:ch.length>3?"h":"h"},prompt:"На рисунке — цепь питания. Какой организм в ней является продуцентом (создаёт органические вещества)?",options:O(r,ch[0],ch.slice(1)),hints:["Продуценты — растения: они создают органические вещества при фотосинтезе."],solution:["Начало цепи — растение: "+ch[0]+". Оно создаёт органику из неорганических веществ (фотосинтез).","Ответ: "+ch[0]+"."]}); }}]);
+/* Фотосинтез и дыхание */
+X.add("bio7","5",[{f:(r)=>{ const q=r.int(0,2); const gl="глюкоза", o2="O₂", co2="CO₂", h2o="H₂O";
+  if(q===0) return quiz({topic:"Фотосинтез: схема",fig:{t:"proc",in:[co2,h2o],mid:"Фотосинтез",out:["?",o2],cond:"свет, хлорофилл"},prompt:"Что образуется в процессе фотосинтеза наряду с кислородом?",options:O(r,"глюкоза (органическое вещество)",["углекислый газ","азот","крахмал и белок одновременно"]),hints:["Из CO₂ и воды на свету создаются органические вещества."],solution:["Фотосинтез: CO₂ + H₂O (на свету, хлорофилл) → глюкоза + O₂.","Ответ: глюкоза."]});
+  if(q===1) return quiz({topic:"Фотосинтез: схема",fig:{t:"proc",in:["?",h2o],mid:"Фотосинтез",out:[gl,o2],cond:"свет, хлорофилл"},prompt:"Какой газ поглощается растением при фотосинтезе?",options:O(r,"углекислый газ CO₂",["кислород O₂","азот N₂","водород H₂"]),hints:["Из чего растение создаёт глюкозу? Из воды и газа из воздуха."],solution:["Фотосинтез: CO₂ + H₂O → глюкоза + O₂.","Поглощается углекислый газ.","Ответ: CO₂."]});
+  return quiz({topic:"Фотосинтез: условия",fig:{t:"proc",in:[co2,h2o],mid:"Фотосинтез",out:[gl,o2],cond:"?"},prompt:"Какое условие необходимо для фотосинтеза?",options:O(r,"свет и хлорофилл",["темнота","низкая температура","только тепло, без света"]),hints:["Зелёное вещество в хлоропластах улавливает энергию Солнца."],solution:["Для фотосинтеза нужны свет и хлорофилл.","Ответ: свет и хлорофилл."]}); }}]);
+X.add("bio7","6",[{f:(r)=>{ const q=r.int(0,1); if(q===0) return quiz({topic:"Дыхание: схема",fig:{t:"proc",in:["глюкоза","O₂"],mid:"Дыхание",out:["?","H₂O"],cond:"выделяется энергия"},prompt:"Какой газ выделяется при дыхании клеток?",options:O(r,"углекислый газ CO₂",["кислород O₂","азот N₂","водород H₂"]),hints:["При дыхании органические вещества окисляются до углекислого газа и воды."],solution:["Дыхание: глюкоза + O₂ → CO₂ + H₂O + энергия.","Ответ: CO₂."]});
+  return quiz({topic:"Дыхание: схема",fig:{t:"proc",in:["глюкоза","?"],mid:"Дыхание",out:["CO₂","H₂O"],cond:"выделяется энергия"},prompt:"Какое вещество необходимо клетке для дыхания (окисления глюкозы)?",options:O(r,"кислород O₂",["углекислый газ CO₂","азот N₂","вода"]),hints:["Окисление — присоединение кислорода."],solution:["Дыхание: глюкоза + O₂ → CO₂ + H₂O + энергия.","Нужен кислород.","Ответ: O₂."]}); }}]);
+/* Рефлекторная дуга */
+const ARC=["Рецептор","Чувствит.\nнейрон","Вставочный\nнейрон","Двигательный\nнейрон","Рабочий\nорган"];
+X.add("bio7","9",[{f:(r)=>{ const i=r.int(0,4); const full=["Рецептор","Чувствительный нейрон","Вставочный нейрон","Двигательный нейрон","Рабочий орган"]; const nodes=full.map((x,k)=>k===i?"?":x);
+  return quiz({topic:"Рефлекторная дуга (схема)",fig:{t:"boxes",nodes,dir:"v"},prompt:"Путь нервного импульса при рефлексе показан стрелками. Какое звено рефлекторной дуги пропущено?",options:O(r,full[i],full.filter((_,k)=>k!==i)),hints:["Порядок: рецептор → чувствительный нейрон → вставочный нейрон → двигательный нейрон → рабочий орган."],solution:["Рефлекторная дуга: "+full.join(" → ")+".","Пропущено: "+full[i]+".","Ответ: "+full[i]+"."]}); }}]);
+}
+})(typeof window!=="undefined"?window:globalThis);
+
+</script>
+<script>
+/* ===== Английский 3, Познание мира 3, Естествознание 3: картинки к словам ===== */
+(function(G){
+"use strict";
+const F=G.FM, X=G.FMX;
+const quiz=o=>{ o.type="quiz"; return o; };
+const O=(r,good,wr)=>r.shuffle([{t:good,ok:true}].concat(wr.filter((w,i,a)=>w!==good&&a.indexOf(w)===i).slice(0,3).map(w=>({t:w,ok:false}))));
+/* слово → картинка (слова — из словарей разделов учебника) */
+const E={
+ colours:[["black","⚫","чёрный"],["blue","🔵","синий"],["green","🟢","зелёный"],["orange","🟠","оранжевый"],["purple","🟣","фиолетовый"],["red","🔴","красный"],["white","⚪","белый"],["yellow","🟡","жёлтый"]],
+ school:[["book","📕","книга"],["notebook","📓","тетрадь"],["pen","🖊️","ручка"],["pencil","✏️","карандаш"],["ruler","📏","линейка"],["schoolbag","🎒","портфель"]],
+ weather:[["It's rainy","🌧️","дождливо"],["It's snowy","❄️","снежно"],["It's sunny","☀️","солнечно"],["It's windy","💨","ветрено"],["It's hot","🥵","жарко"],["It's cold","🥶","холодно"],["autumn","🍂","осень"],["spring","🌸","весна"],["winter","⛄","зима"]],
+ clothes:[["boots","🥾","сапоги"],["dress","👗","платье"],["gloves","🧤","перчатки"],["hat","🧢","шапка"],["jacket","🧥","куртка"],["jeans","👖","джинсы"],["T-shirt","👕","футболка"],["shoes","👞","туфли"]],
+ actions:[["climb","🧗","лазать"],["cook","🧑‍🍳","готовить"],["dance","💃","танцевать"],["draw","🎨","рисовать"],["run","🏃","бегать"],["sing","🎤","петь"],["skateboard","🛹","кататься на скейте"]],
+ toys:[["ball","⚽","мяч"],["robot","🤖","робот"],["scooter","🛴","самокат"],["teddy bear","🧸","плюшевый мишка"],["train","🚂","поезд"],["jigsaw puzzle","🧩","пазл"]],
+ body:[["ears","👂","уши"],["eyes","👀","глаза"],["mouth","👄","рот"],["nose","👃","нос"],["feet","🦶","ступни"],["arms","💪","руки"]],
+ food:[["apple","🍎","яблоко"],["banana","🍌","банан"],["broccoli","🥦","брокколи"],["carrot","🥕","морковь"],["cheese","🧀","сыр"],["chicken","🍗","курица"],["chocolate","🍫","шоколад"],["ice cream","🍦","мороженое"],["pear","🍐","груша"],["potato","🥔","картофель"],["rice","🍚","рис"],["water","💧","вода"]],
+ house:[["bath","🛁","ванна"],["bed","🛏️","кровать"],["clock","🕒","часы"],["lamp","💡","лампа"],["sofa","🛋️","диван"]],
+ holidays:[["suitcase","🧳","чемодан"],["sunglasses","🕶️","солнечные очки"]],
+ transport:[["boat","⛵","лодка"],["bus","🚌","автобус"],["car","🚗","машина"],["helicopter","🚁","вертолёт"],["lorry","🚚","грузовик"],["motorbike","🏍️","мотоцикл"],["plane","✈️","самолёт"],["train","🚂","поезд"],["cinema","🎬","кинотеатр"],["beach","🏖️","пляж"],["zoo","🦁","зоопарк"],["swimming pool","🏊","бассейн"]]
+};
+const pic=(topic,list,pool,ask)=>({f:(r)=>{ const w=r.pick(list); const others=r.shuffle((pool||list).filter(x=>x[0]!==w[0])).slice(0,3);
+  return quiz({topic,fig:{t:"emoji",items:[w[1]]},prompt:ask||"What is it? Choose the English word.",options:r.shuffle([{t:w[0],ok:true}].concat(others.map(o=>({t:o[0],ok:false})))),answer:w[0],hints:["Look at the picture and remember the word from the unit."],solution:[w[1]+" — "+w[0]+" ("+w[2]+").","Ответ: "+w[0]+"."]}); }});
+const NUMW=["one","two","three","four","five","six","seven","eight","nine","ten"];
+const FR=["🍎","⭐","🎈","🐟","🚗","🌸"];
+const E1=[pic("Colours (picture)",E.colours,null,"What colour is it?"),
+ {f:(r)=>{ const n=r.int(1,10), em=r.pick(FR); const w=NUMW[n-1]; const wr=[NUMW[(n)%10],NUMW[(n+1)%10],NUMW[(n+4)%10],NUMW[(n+7)%10]]; return quiz({topic:"Numbers (picture)",fig:{t:"emoji",items:Array(n).fill(em)},prompt:"How many are there?",options:O(r,w,wr),answer:w,hints:["Count the pictures."],solution:["Pictures: "+n+".","Ответ: "+w+" ("+n+")."]}); }}];
+X.add("eng3","1",E1); X.add("eng3","2",[pic("School things (picture)",E.school)]);
+X.add("eng3","4",[pic("Weather and seasons (picture)",E.weather,null,"Look at the picture. Which phrase is it?")]);
+X.add("eng3","5",[pic("Actions (picture)",E.actions,null,"What is he/she doing? Choose the English word.")]);
+X.add("eng3","6",[pic("Body parts (picture)",E.body,null,"What is it? Choose the English word."),pic("Food and drinks (picture)",E.food)]);
+X.add("eng3","7",[pic("Things in a house (picture)",E.house),pic("Transport and places (picture)",E.transport)]);
+X.add("eng3","8",[pic("Clothes (picture)",E.clothes),pic("Toys (picture)",E.toys),pic("Holidays (picture)",E.holidays.concat(E.clothes.slice(0,2)))]);
+
+/* Познание мира / Естествознание */
+const AN=[["верблюд","🐪","домашнее"],["лошадь","🐎","домашнее"],["овца","🐑","домашнее"],["корова","🐄","домашнее"],["курица","🐔","домашнее"],["волк","🐺","дикое"],["лиса","🦊","дикое"],["заяц","🐇","дикое"],["медведь","🐻","дикое"],["орёл","🦅","дикое"],["сайгак","🦌","дикое"]];
+X.add("world3","1",[{f:(r)=>{ const a=r.pick(AN); return quiz({topic:"Животные (рисунок)",fig:{t:"emoji",items:[a[1]]},prompt:"Это домашнее или дикое животное?",options:r.shuffle([{t:"домашнее",ok:a[2]==="домашнее"},{t:"дикое",ok:a[2]==="дикое"}]),hints:["Домашних животных человек разводит и содержит. Дикие живут на свободе."],solution:[a[0].charAt(0).toUpperCase()+a[0].slice(1)+" — "+a[2]+" животное.","Ответ: "+a[2]+"."]}); }},
+ {f:(r)=>{ const a=r.pick(AN); const o=r.shuffle(AN.filter(x=>x!==a)).slice(0,3); return quiz({topic:"Животные (рисунок)",fig:{t:"emoji",items:[a[1]]},prompt:"Кто изображён на рисунке?",options:r.shuffle([{t:a[0],ok:true}].concat(o.map(x=>({t:x[0],ok:false})))),hints:["Вспомни, как выглядит это животное."],solution:["На рисунке — "+a[0]+".","Ответ: "+a[0]+"."]}); }}]);
+const SP=[["Земля","🌍"],["Луна","🌙"],["Солнце","☀️"],["звезда","⭐"],["ракета","🚀"]];
+X.add("nat3","4",[{f:(r)=>{ const a=r.pick(SP); const o=r.shuffle(SP.filter(x=>x!==a)).slice(0,3); return quiz({topic:"Земля и космос (рисунок)",fig:{t:"emoji",items:[a[1]]},prompt:"Что изображено на рисунке?",options:r.shuffle([{t:a[0],ok:true}].concat(o.map(x=>({t:x[0],ok:false})))),hints:["Подумай, что ты видишь на небе днём и ночью."],solution:["Ответ: "+a[0]+"."]}); }}]);
+const ST=[["лёд","🧊","твёрдое"],["вода","💧","жидкое"],["камень","🪨","твёрдое"],["молоко","🥛","жидкое"],["сок","🧃","жидкое"],["железо (гвоздь)","🔩","твёрдое"]];
+X.add("nat3","3",[{f:(r)=>{ const a=r.pick(ST); return quiz({topic:"Состояния веществ (рисунок)",fig:{t:"emoji",items:[a[1]]},prompt:"Какое это вещество по состоянию: твёрдое или жидкое? («"+a[0]+"»)",options:r.shuffle([{t:"твёрдое",ok:a[2]==="твёрдое"},{t:"жидкое",ok:a[2]==="жидкое"}]),hints:["Твёрдое сохраняет форму, жидкое принимает форму сосуда."],solution:[a[0]+" — "+a[2]+" вещество.","Ответ: "+a[2]+"."]}); }}]);
+})(typeof window!=="undefined"?window:globalThis);
+
+</script>
+<script>
 /* ===== FM APP PATCH: new daily-set engine UI, fixes ===== */
 (function(){
 "use strict";
@@ -4996,6 +5639,7 @@ window.task=function(root){
   }
   const card=$("div",{className:"card"});
   const pr=$("div",{style:"font-size:18px;font-weight:700;margin-bottom:10px;white-space:pre-wrap;line-height:1.4"}); pr.textContent=item.prompt; card.append(pr);
+  if(item.fig&&window.FMFig){ const fg=$("div"); fg.innerHTML=window.FMFig.html(item.fig); card.append(fg); }
   if(item.type==="quiz"){
     item.options.forEach(o=>{ const d=$("div",{className:"opt",textContent:o.t});
       if(!S.checked && S.pick===o.t) d.classList.add("on");
